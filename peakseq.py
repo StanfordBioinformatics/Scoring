@@ -15,7 +15,7 @@ PEAKSEQ_BINARY = conf.PEAKSEQ_BINARY
 BIN_SIZE = conf.PEAKSEQ_BIN_SIZE
 
 NAME = 'peakseq'
-USE_CONTROL_LOCK = True
+USE_CONTROL_LOCK = False
 
 def archive_results(name, results_dir, archive_file):
  	if os.path.exists(archive_file):

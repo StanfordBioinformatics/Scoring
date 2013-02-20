@@ -15,7 +15,7 @@ QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
 
 NAME = 'spp_nodups'
-USE_CONTROL_LOCK = True
+USE_CONTROL_LOCK = False
 
 def run_peakcaller(name, control, sample, options=None):
 	if not options:

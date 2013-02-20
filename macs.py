@@ -17,7 +17,7 @@ QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
 
 NAME = 'macs'
-USE_CONTROL_LOCK = True
+USE_CONTROL_LOCK = False
 
 from peakseq import archive_results
 	
