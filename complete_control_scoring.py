@@ -14,7 +14,7 @@ CONTROL_DB_PORT = conf.CONTROL_DB_PORT
 if __name__ == '__main__':
 	if len(sys.argv) < 3:
 		print "Usage:  complete_control_scoring.py <control_results_dir> <peakcaller>"
-		raise SystemExit(0)
+		raise SystemExit(64)
 	
 	results_dir = sys.argv[1]
 	peakcaller = sys.argv[2]

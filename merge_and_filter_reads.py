@@ -3,6 +3,7 @@
 import sys
 import os
 import subprocess
+import time
 import conf
 
 from eland import ElandExtendedFile, ElandMultiFile, ElandFile, BwaSamFile, BowtieSamFile, ElandSamFile, IlluminaSamFile
@@ -115,14 +116,22 @@ def convert_sam(eland_output, sam_input, mismatches):
 		convert_bowtiesam(eland_output, sam_input, mismatches)
 		
 def convert_bam(eland_output, bam_input, mismatches):
+	"""
+	bam2sam
+	"""
+	print "converting bam to sam ...",mismatches
 	sam_input = os.path.join(TMP_DIR, os.path.basename(bam_input)[:-4
-	] + '.sam')
+	] + str(time.time()) + '.sam')
+	print "converting to sam: %s" % sam_input
 	bam2sam_cmd = SAMTOOLS_BIN + ' view -h %s > %s' % (bam_input, sam_input)
+	print bam2sam_cmd
 	subprocess.call(bam2sam_cmd, shell=True)
 	convert_sam(eland_output, sam_input, mismatches)
+	print "deleting %s" % sam_input
 	os.remove(sam_input)
 			
 def merge_unique_eland(output, mapped_reads_files, mismatches=2):
+	print "merge_filter %s to %s" % (','.join(mapped_reads_files), output)
 	eland_out = ElandFile(output, 'w')
 	for i in mapped_reads_files:
 		if not os.path.exists(i):
@@ -134,10 +143,13 @@ def merge_unique_eland(output, mapped_reads_files, mismatches=2):
 			convert_sam(eland_out, i, mismatches)
 			continue
 		if 'multi' in i:
+			print " multi eland ..."
 			eland_in = ElandMultiFile(i, 'r')
 		elif 'extended' in i:
+			print " extended ..."
 			eland_in = ElandExtendedFile(i, 'r')
 		else:
+			print "ElandFile ..."
 			eland_in = ElandFile(i, 'r')
 		total_passed = 0
 		for i, line in enumerate(eland_in):
@@ -151,6 +163,7 @@ def merge_unique_eland(output, mapped_reads_files, mismatches=2):
 			else:
 				total_passed += 1
 				eland_out.write(line.convert_to_eland())
+			print "best_hits",best_hits	
 		print "unique eland: total lines", i, "total passed", total_passed
 		eland_in.close()
 	eland_out.close()

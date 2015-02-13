@@ -9,7 +9,7 @@ import idr
 import conf
 
 
-BIN_DIR = conf.BIN_DIR
+BIN_DIR = conf.BIN_DIR #/srv/gs1/projects/scg/Scoring/pipeline2
 SUBMISSION_BIN_DIR = conf.SUBMISSION_BIN_DIR
 MACS_BINARY = conf.MACS_BINARY
 MACS_LIBRARY = conf.MACS_LIBRARY
@@ -17,7 +17,7 @@ QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
 
 NAME = 'macs'
-USE_CONTROL_LOCK = False
+USE_CONTROL_LOCK = True
 
 from peakseq import archive_results
 	
@@ -30,13 +30,16 @@ def check_control_inputs(control):
 		if not os.path.exists(mr):
 			raise Exception("Cannot find mapped reads file %s" % mr)
 			
-def check_sample_inputs(sample):
-	if os.path.exists(os.path.join(sample.results_dir, 'rep_stats')):
-		raise Exception("Sample results non-empty.")
- 	if os.path.exists(sample.archive_file):
- 		raise Exception("Archive of sample results already exists as %s" % sample.archive_file)
+def check_sample_inputs(sample,force=False):
+	repStatsFile = os.path.join(sample.results_dir, 'rep_stats')
+	if os.path.exists(repStatsFile):
+		if not force:
+			errMsg = "Error: File " + repStatsFile + " exists. Sample results non-empty. Overwriting"
+			raise Exception(errMsg)
+ 	#if os.path.exists(sample.archive_file):
+ 		#raise Exception("Archive of sample results already exists as %s" % sample.archive_file)
 	if sample.genome not in chr_maps.genomes:
-		raise Exception("Genome %s not found. Valid genomes: " % (sample_conf.GENOME, ' '.join(chr_maps.genomes.keys())))
+		raise Exception("Genome %s not found. Valid genomes: " % (sample.genome, ' '.join(chr_maps.genomes.keys())))
 	if sample.genome not in chr_maps.macs_genome_size:
 		raise Exception("Genome %s MACS size not found.  Valid genomes: " % (sample.genome, ' '.join(chr_maps.macs_genome_size.keys())))
 		
@@ -51,15 +54,16 @@ from peakseq import prep_sample
 def form_control_files(name, control):
 	cmds = []
 	control.merged_file_location = os.path.join(control.results_dir, '%s_merged_eland.txt' % control.run_name)
-	
 	# Merge eland files
 	cmd = os.path.join(BIN_DIR, 'merge_and_filter_reads.py')
 	cmd += ' %s' % control.merged_file_location
+
 	for mr in control.mapped_read_files:
 		cmd += ' %s' % mr
+		print "mr 1 " + cmd
 	cmds.append(cmd)
 	
-	j = sjm.Job(control.run_name, cmds, queue=QUEUE, project=PROJECT)
+	j = sjm.Job(control.run_name, cmds, queue=QUEUE, project=PROJECT) #QUEUE=seq_pipeline
 	control.add_jobs(name, [j,])
 		
 from peakseq import form_sample_files
@@ -92,6 +96,7 @@ def form_replicate_files(rep, sample, rmdups=False):
 		cmd = os.path.join(BIN_DIR, 'filter_dup_reads_eland.py')
 		cmd += ' %s' % orig_merged
 		cmd += ' %s' % rep.merged_file_location
+		print "no_dups",cmd
 		cmds.append(cmd)
 	
 	# Make Pseudoreplicates
@@ -123,6 +128,8 @@ def run_peakcaller(name, control, sample, options=None):
 	if not options:
 		options = {}
 	jobs = []
+	sppFile = os.path.join(sample.results_dir, 'spp_stats.txt')
+
 	for r in sample.replicates + [sample.combined_replicate,]:
 		# Regular Run
 		cmds = ['cd %s' % r.results_dir(sample), 'export PYTHONPATH=%s:$PYTHONPATH' % MACS_LIBRARY,]
@@ -134,7 +141,7 @@ def run_peakcaller(name, control, sample, options=None):
 		macs_cmd += ' -w' # create wiggle file
 		macs_cmd += ' -p 1e-2' # Generous p-value cutoff for req for IDR
 		macs_wrapper_cmd = os.path.join(BIN_DIR, 'macs_wrapper.py') 
-		macs_wrapper_cmd += ' ' + os.path.join(sample.results_dir, 'spp_stats.txt')
+		macs_wrapper_cmd += ' ' + sppFile
 		macs_wrapper_cmd += ' ' + r.rep_name(sample) + '.tagAlign'
 		macs_wrapper_cmd += ' ' + macs_cmd
 		cmds.append(macs_wrapper_cmd)
@@ -183,7 +190,9 @@ def merge_results(name, sample):
 from peakseq import replicate_scoring			
 
 def form_idr_inputs(name, sample):
-	os.makedirs(os.path.join(sample.results_dir, 'idr'))
+	idrDir = os.path.join(sample.results_dir, 'idr')
+	if not os.path.exists(idrDir):
+		os.makedirs(idrDir)
 	jobs = []
 	for rep in sample.replicates + [sample.combined_replicate,]:
 		cmds = []

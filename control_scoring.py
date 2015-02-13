@@ -28,8 +28,16 @@ def query_control_db(conn, name, peakcaller):
 	'''
 	cursor = conn.cursor()
 	sql = "SELECT ready FROM encode_controls WHERE name='%s' AND peakcaller='%s'" % (name, peakcaller)
+	#mysql --password=Ry62M4qgApr --host=dirk-new-genstorage.sunet --user=seq_pipeline pipelines
+	#encode_controls table has rows like:
+   	#| id | name                                                       | ready | peakcaller |
+   	#| 5991 | /srv/gs1/projects/scg/SNAP_Scoring/production/controls/human/CellLine2_Control349/results                         |     1 | macs       |
+   	#| 5993 | /srv/gsfs0/projects/gbsc/workspace/dsalins/MACS_337/results                                                       |     0 | spp        |
+   	#| 5994 | /srv/gsfs0/projects/gbsc/workspace/dsalins/MACS_360/results                                                       |     1 | macs       |
+   	#| 5995 | /srv/gsfs0/projects/gbsc/workspace/dsalins/MACS_361/results                                                       |     1 | macs    
 	cursor.execute(sql)
 	result = cursor.fetchone()
+	print "result ",result
 	conn.commit()
 	if not result:
 		return -1
@@ -37,7 +45,6 @@ def query_control_db(conn, name, peakcaller):
 	
 def complete_control_db(conn, name, peakcaller):
 	'''Updates Control status to completed.'''
-	
 	cursor = conn.cursor()
 	sql = "UPDATE encode_controls SET ready=1 WHERE name='%s' AND peakcaller='%s'" % (name, peakcaller)
 	cursor.execute(sql)
@@ -62,13 +69,20 @@ def wait_for_control(conn, name, peakcaller):
 	print "%s is finished scoring."  % name
 
 def check_for_control(results_dir, peakcaller, use_control_lock=True):
+	"""
+	Function : If entry exists in MySQL table pipelines.encode_controls (see format of table above in query_control_db() ) and the ready attribute is set to 0, then waits for scoring to complete. 
+						 If ready is set to 1, then scoring is complete. Otherwise, entry will not be in table and an entry is inserted into the table with ready set to 0,
+						 and the function will then return False.
+	"""
 	if not use_control_lock:
 		return False
 	import MySQLdb
 	f = open(MYSQL_PASSWORD_FILE, 'r')
 	passwd = f.readline().rstrip('\n')
 	f.close()
+
 	conn = MySQLdb.connect(host=CONTROL_DB_HOST, user=CONTROL_DB_USER, port=CONTROL_DB_PORT, passwd=passwd, db=CONTROL_DB)
+	
 	control_status = query_control_db(conn, results_dir, peakcaller)
 	if control_status == 1:
 		return True

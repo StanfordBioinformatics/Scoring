@@ -1,64 +1,8 @@
 #!/bin/env python
 
-"""
-pipeline.py
-
-Runs PeakSeq scoring pipeline for ChipSeq data.
-
-Usage:  pipeline.py [-f] [-p] [-h] [-s] [-a] [-m <email address>] [-l <directory>] [-n <run_name>] [-c <peakcaller>] <control_config_file> [<sample_config_file>]
-
-Arguments:
-	-c, --peakcaller <peakcaller>
-	specify the peakcaller to be used.  Current options are peakseq, macs, 
-	macs2, spp. Defaults to macs2.
-	
-	-a, --no_archive
-	does not archive the control and sample results.  
-	
-	-f, --force
-	forces running of pipeline, even if results already exist
-	
-	-p, --print
-	prints the job commands, but does not dispatch them to the cluster
-	
-	-d, --no_duplicates
-	runs cross correlation analysis assuming duplicated reads have
-	already been filtered out of the mapped reads.  Uncommon, so
-	defaults to false.
-	
-	-h, --help
-	displays this usage information and exits
-	
-	-l <directory>, --log <directory>
-	log directory, current working directory if not specified
-	
-	-n <run_name>, --name <run_name>
-	name for the pipeline run
-	
-	-m <email_address>, --mail <email_address>
-	email address to send summary and result location
-	
-	-s, --snap
-	make a call to the SNAP LIMS after completion
-	
-	--filtchr <chromosome>
-	SPP option to ignore a chromosome during analysis.  Used to fix bug that 
-	chrs with low read counts causes SPP to fail. 
-	
-	--rmdups
-	Filter out all duplicate reads in sample read files before peakcalling.  Use
-	when PCR amplification errors are present.  (i.e., PBC value is low)
-	
-	<control_config_file>
-	(required) configuration file for the experiment's control
-	
-	<sample_config_file>
-	configuration file for the sample replicates in the experiment.  Optional, 
-	but in most cases this is specified.
-
-"""
-
-import getopt
+import datetime
+import time
+import glob
 import sys
 import os
 
@@ -68,14 +12,15 @@ import idr
 from conf import ConfigControl, ConfigSample
 import conf
 
-
 BIN_DIR = conf.BIN_DIR
 ARCHIVE_DIR = conf.ARCHIVE_DIR
 DOWNLOAD_BASE = conf.DOWNLOAD_BASE
 SJM_NOTIFY = conf.SJM_NOTIFY
 QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
+SCH_OPT = conf.SCHED_OPTIONS
 SNAP_RUN = False
+GBSC_DIR = "/srv/gsfs0/projects/gbsc/"
 
 class ScoringJobs:
 	def add_jobs(self, jobs_name, jobs):
@@ -120,7 +65,19 @@ class Sample(ScoringJobs):
 		self.archive_file = os.path.join(ARCHIVE_DIR, run_name + '.tar.gz')
 		self.archive_file_download = DOWNLOAD_BASE + run_name + '.tar.gz'
 		self.idr_dir = os.path.join(results_dir, 'idr')
-		self.spp_stats = os.path.join(results_dir, 'spp_stats.txt')
+		sppFile = os.path.join(results_dir, 'spp_stats.txt')
+		if os.path.exists(sppFile):
+			os.remove(sppFile)
+		repStatsFile = os.path.join(results_dir,"rep_stats")
+		if os.path.exists(repStatsFile):
+			os.remove(repStatsFile)
+		idrResultsFile = os.path.join(results_dir,"idr_results.txt")
+		if os.path.exists(idrResultsFile):
+			os.remove(idrResultsFile)
+		pbcStatsFile = os.path.join(results_dir,"pbc_stats.txt")
+		if os.path.exists(pbcStatsFile):
+			os.remove(pbcStatsFile)
+		self.spp_stats = sppFile
 		self.jobs = {}
 		self.combined_replicate = CombinedReplicate([])
 		for r in self.replicates:
@@ -168,11 +125,52 @@ def add_dependencies(primary_jobs, dependent_jobs):
 	for dj in dependent_jobs:
 		for pj in primary_jobs:
 			dj.add_dependency(pj)		
-		
-def main(peakcaller, run_name, control_conf, sample_conf=None, force=False, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False):
-	control_conf = ConfigControl(control_conf)
-	if sample_conf:
-		sample_conf = ConfigSample(sample_conf)
+	
+def elandToBamFileName(infile):
+	"""
+	Added by Nathaniel Watson on May 12, 2014
+	Function: Converts a mapping file name from eland-name format to bam-name format.
+	Args    : infile - str. file name
+	Returns : str. updated file name.
+	Examle  :  input- /srv/gs1/projects/scg/Archive/IlluminaRuns/2012/jan/120123_MAGNUM_00122_FC63A4Y/120123_MAGNUM_00122_FC63A4Y_L2_eland_extended_pf.txt.gz
+						output- /srv/gs1/projects/scg/Archive/IlluminaRuns/2012/jan/120123_MAGNUM_00122_FC63A4Y/120123_MAGNUM_00122_FC63A4Y_L2_pf.bam
+	"""
+	basename = os.path.basename(infile)
+	newBasename = basename.split("_eland")[0] + "_pf.bam"
+	return os.path.join(os.path.dirname(infile),newBasename)
+
+def checkControlScored(control):
+	"""
+	Args : control - a Control instance
+	"""
+	resdir = control.results_dir
+	elandFile = glob.glob(resdir + "/" + "*merged_eland*")
+	if elandFile:
+		elandFile = elandFile[0]
+	else:
+		return False
+	return getFileAgeHours(elandFile)
+
+def getFileAgeHours(infile):
+	"""
+	Function : Calculates the age of a file in hours. Partial hours are always rounded down a whole number.
+	Raises an IOError of the input file doens't exist.
+	"""
+	print "##" + infile + "##"
+	if not os.path.exists(infile):
+		raise IOError("Can't check age of non-existant file '{infile}'".format(infile=infile))
+	mtime = datetime.datetime.fromtimestamp(os.path.getmtime(infile))
+	now = datetime.datetime.now()
+	diff = now - mtime
+	seconds = diff.total_seconds()
+	minutes = seconds/60
+	hours = minutes/60
+	return hours	
+	
+	
+def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
+	rescore_control = 24 * rescore_control #convert from days to hours
+
 	if not emails:
 		emails = []
 	if not log_dir:
@@ -181,37 +179,185 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, force=False, prin
 		peakcaller_options = {}
 	if not xcorrelation_options:
 		xcorrelation_options = {}
+	control_conf = ConfigControl(control_conf) #parse fields out of control file
+	if sample_conf:
+		sample_conf = ConfigSample(sample_conf)
+	if genome:
+		sample_conf.GENOME=genome
+
+	###Several runs from early on, such as in the beginning of 2012, had not BAM files as input, but instead eland files. These eland file names are in the SNAP lims for many runs. Those eland files are no longer in the archive,
+	### and for these runs, all input should now be bam.  The code below converts an eland file name to a bam file name. If the bam file doens't exist, then the pipeline will crash and the bam files must be created in 
+	### a separate task. 
+	count = -1
+	for i in control_conf.CONTROL_MAPPED_READS:
+		count += 1
+		if i.startswith("/opt/scg/scg1_prd_10/"):
+			i = i.lstrip("/opt/scg/scg1_prd_10/") #some runs, such is ID 388 have this incorrect path
+			i = GBSC_DIR + i
+		##The following check for .Eland in the dirname accounts for the numerous cases where the mapping file path is like:
+		##  /srv/gs1/projects/scg/Archive/IlluminaRuns/2012/may/120501_ROCKFORD_00145_FC64VL1.Eland/L4/120501_ROCKFORD_00145_FC64VL1_L4_pf.bam
+		## and it should instaed lack the ".Eland" part (i.e. see http://scg-snap.stanford.edu/api/peakseq_inputs/show?experiment_run_id=380).
+		if ".Eland" in i:
+			i = i.replace(".Eland","")
+		basename = os.path.basename(i)
+		if "_eland" in basename:
+			i = elandToBamFileName(i)
+		control_conf.CONTROL_MAPPED_READS[count] = i
 		
+	if sample_conf:
+		replicates = [x[0] for x in sample_conf.REPLICATES] #sample_conf.REPLICATE is a list of 1-item lists
+		count = -1
+		for rep in replicates:
+			count += 1
+			if rep.startswith("/opt/scg/scg1_prd_10/"):
+				rep = rep.lstrip("/opt/scg/scg1_prd_10/")
+				rep = GBSC_DIR + rep
+			if ".Eland" in rep:
+				rep = rep.replace(".Eland","")
+			basename = os.path.basename(rep)
+			if "_eland" in basename:
+				sample_conf.REPLICATES[count] = [elandToBamFileName(rep)]
+
+	###NW End code to convert file names from eland to bam names.
+	###
+
+
+	###Nathaniel Watson. May 12, 2014.
+  ### Now, need to check if BAM files exist. If so, good, otherwise, generate BAM files.
+	###Currently, only support for making single-end mappings on the fly
+#	if not paired_end:
+#		if sample_conf:
+			
+	
+	if paired_end:
+		controls = control_conf.CONTROL_MAPPED_READS
+		all_mapped_reads = controls[:]
+#		print ("Controls: " +  str(controls) + "\n")
+		if sample_conf:
+			replicates = [x[0] for x in sample_conf.REPLICATES] #sample_conf.REPLICATE is a list of 1-item lists
+#			print ("Replicates are: " + str(replicates) + "\n")
+			all_mapped_reads.extend(replicates) 
+		jobs = []
+		forwardReadExt = "_forwardReads.bam"
+		progressReadExt = "_forwardReads.bam.encours"
+		for i in all_mapped_reads:
+			frf = i.rstrip(".bam") + forwardReadExt		
+			frf_progress = i.rstrip(".bam") + progressReadExt
+			print("###" + frf + "###")
+			if os.path.exists(frf) or os.path.exists(frf_progress):
+				bamDone = False
+				countLimit = 5
+				count = 0
+				while count < countLimit:
+					count += 1
+					try:
+						age = getFileAgeHours(frf)
+					except IOError:
+						age = 0
+						pass
+					if age >= 1:
+						bamDone = True
+						break
+					else:
+						#sleep an hour
+						time.sleep(3600)
+				if not bamDone:
+					raise Exception("Waited too long for BAM file {} from other project to finish to finish being made. Exiting.".format(frf))
+			else:
+				cmd = "samtools view -hbF 0x40 {peFile} > {seFile}".format(peFile=i,seFile=frf)
+				jobname = "toSingleEnd_{0}".format(os.path.basename(i))
+				job = sjm.Job(jobname,cmd,modules = ["samtools"],queue=conf.QUEUE,memory="5G")
+				jobs.append(job)
+		if jobs:
+			submission = sjm.Submission(jobs=jobs,log_directory=log_dir,notify=SJM_NOTIFY)		
+			sjmfile = os.path.join(log_dir, run_name + '_MakeSingleEndMappings.jobs')
+			print ("Removing reverse reads in control and sample BAM files. Commands are in SJM file {sjmfile}".format(sjmfile=sjmfile))
+			try:
+				submission.run(sjmfile,foreground=True)
+			except subprocess.CalledProcessError:
+				raise
+
+		control_conf.CONTROL_MAPPED_READS = [x.rstrip(".bam") + forwardReadExt for x in controls]
+		sample_conf.REPLICATES = [ [x.rstrip(".bam") + forwardReadExt] for x in replicates]
+	print ("Controls: " + "  ".join(control_conf.CONTROL_MAPPED_READS) + "\n")
+	print ("Replicates: " + "  ".join([x[0] for x in sample_conf.REPLICATES]))
+
+	print " archive results: ", archive_results
 	jobs = []	
-	
-	control = Control(control_conf.RUN_NAME, control_conf.RESULTS_DIR, control_conf.TEMP_DIR, control_conf.GENOME, control_conf.CONTROL_MAPPED_READS, control_conf, peakcaller.NAME)
-	if not control_scoring.check_for_control(control_conf.RESULTS_DIR, control.peakcaller, peakcaller.USE_CONTROL_LOCK):
-		try:
-			peakcaller.check_control_inputs(control)
-			peakcaller.form_control_files('form_control_files', control)
-			peakcaller.complete_control('complete_control', control)
-			add_dependencies(control.jobs['form_control_files'], control.jobs['complete_control'])
-			if archive_results:
-				peakcaller.archive_control('archive_control', control)
-				add_dependencies(control.jobs['form_control_files'], control.jobs['archive_control'])
-			jobs += control.all_jobs()
-		except Exception, e:
-			import traceback
- 			print "error detected, removing control lock"
- 			traceback.print_exc()
- 			control_scoring.remove_lock(control.results_dir, control.peakcaller, peakcaller.USE_CONTROL_LOCK)
- 			raise e
-	else:
-		print "Control %s already scored, skipping." % control.run_name
-	
+
 	sample = None
 	if sample_conf:
-		sample = Sample(sample_conf.RUN_NAME, sample_conf.RESULTS_DIR, sample_conf.TEMP_DIR, sample_conf.GENOME, [SampleReplicate(i+1, x) for i, x in enumerate(sample_conf.REPLICATES)], sample_conf)
-		peakcaller.check_sample_inputs(sample)
+		sample = Sample(sample_conf.RUN_NAME, sample_conf.RESULTS_DIR, sample_conf.TEMP_DIR, sample_conf.GENOME, [SampleReplicate(i+1, x)for i, x in enumerate(sample_conf.REPLICATES)], sample_conf)
+
+	control_lock = peakcaller.USE_CONTROL_LOCK
+	if no_control_lock:
+		control_lock = False
+
+	control = Control(control_conf.RUN_NAME, control_conf.RESULTS_DIR, control_conf.TEMP_DIR, control_conf.GENOME, control_conf.CONTROL_MAPPED_READS, control_conf, peakcaller.NAME)
+
+	controlScored = False
+	countLimit = 5
+	count = 0
+	while count < countLimit:
+		count += 1
+		scoreTime = checkControlScored(control)
+		if not scoreTime:
+			#means it returned False b/c control output file didn't exist, so never scored.
+			break
+		#otherwise, it returned a number of hours as a float that the control file has been untouched
+		elif  scoreTime >= 1:
+			controlScored = True
+			break
+		else:
+			#sleep an hour
+			time.sleep(3600)
+	
+	if not controlScored and count == countLimit:
+		raise Exception("Waited too long for control scoring from other project to finish. Exiting.")
+
+	doRescore = False
+	if rescore_control and (scoreTime > rescore_control):
+		doRescore = True
+	elif (not scoreTime) or doRescore:
+			peakcaller.form_control_files('form_control_files', control) #add job merge_and_filter_reads.py
+			if archive_results:
+				peakcaller.archive_control('archive_control', control,force=force)
+				add_dependencies(control.jobs['form_control_files'], control.jobs['archive_control'])
+			jobs += control.all_jobs()
+
+###nathankw comment out below on 2014-06-08
+#	if not control_scoring.check_for_control(results_dir=control_conf.RESULTS_DIR, peakcaller=control.peakcaller,use_control_lock=control_lock) or rescore_control:
+#		try:
+#			peakcaller.check_control_inputs(control) #checks that genome and BAMS of control exist
+#			peakcaller.form_control_files('form_control_files', control) #add job merge_and_filter_reads.py
+#			#The call below peakcaller.complete_control() adds the job complete_control_scoring.py if USE_CONTROL_LOCK is True, whose goal is to run the below command
+#			# "UPDATE encode_controls SET ready=1 WHERE name='%s' AND peakcaller='%s'" % (results_dir, peakcaller)
+#			#  Which menas that the control is now scored.
+#			peakcaller.complete_control('complete_control', control) 
+#			add_dependencies(control.jobs['form_control_files'], control.jobs['complete_control'])
+#			if archive_results:
+#				peakcaller.archive_control('archive_control', control,force=force)
+#				add_dependencies(control.jobs['form_control_files'], control.jobs['archive_control'])
+#			jobs += control.all_jobs()
+#		except Exception, e:
+#			import traceback
+# 			print "error detected, removing control lock"
+# 			traceback.print_exc()
+# 			control_scoring.remove_lock(control.results_dir, control.peakcaller, control_lock)
+# 			raise e
+#	else:
+#		print " Control %s already scored, skipping." % control.run_name
+
+	if sample_conf:
+		peakcaller.check_sample_inputs(sample,force=force)
+		
 		if remove_duplicates:
+			print "rm dups"
 			peakcaller.form_sample_files_nodups('form_sample_files', sample)
 		else:
+			print "no dups"
 			peakcaller.form_sample_files('form_sample_files', sample)
+		
 		peakcaller.calc_pbc('calc_pbc', control, sample)
 		peakcaller.run_peakcaller('peakcaller', control, sample, peakcaller_options)
 		add_dependencies(sample.jobs['form_sample_files'], sample.jobs['calc_pbc'])
@@ -221,10 +367,9 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, force=False, prin
 		peakcaller.merge_results('merge_results', sample)
 		add_dependencies(sample.jobs['peakcaller'], sample.jobs['merge_results'])
 		if archive_results:
-			peakcaller.archive_sample('archive_sample', sample, control)
+			peakcaller.archive_sample('archive_sample', sample, control,force=force)
 			add_dependencies(sample.jobs['merge_results'], sample.jobs['archive_sample'])
-		
-		
+          		
 		# IDR Analysis
 		peakcaller.form_idr_inputs('idr_format_inputs', sample)
 		add_dependencies(sample.jobs['merge_results'], sample.jobs['idr_format_inputs'])
@@ -251,11 +396,12 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, force=False, prin
 		jobs += sample.all_jobs()
 
 	if emails:
+		print "emails" % emails
 		jobs.append(peakcaller.mail_results(sample, control, run_name, emails))
-	jobs.append(peakcaller.cleanup(sample, control))
+	#jobs.append(peakcaller.cleanup(sample, control))
 	
 	if SNAP_RUN and sample_conf:
-		snap_job = sjm.Job("SNAP", "bash /srv/gs1/apps/snap_support/production/current/peakseq_report_parser_wrapper.sh production %s >& ~alwon/peakseq_report_out " % sample_conf.path,  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs())
+		snap_job = sjm.Job("SNAP", "bash /srv/gs1/apps/snap_support/production/current/peakseq_report_parser_wrapper.sh production %s >& %s/peakseq_report_out " % (sample_conf.path,sample_conf.RESULTS_DIR),  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs(), sched_options='-A chipseq_scoring')
 		jobs.append(snap_job)
 				
 	if control.jobs:
@@ -265,65 +411,56 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, force=False, prin
 	submission = sjm.Submission(jobs, log_directory=log_dir, notify=SJM_NOTIFY)
 	if print_cmds:
 		submission.build(run_name + '.jobs') 
-		raise SystemExit(0)
+		raise SystemExit(1)
 	if log_dir:
-		submission.run(os.path.join(log_dir, run_name + '.jobs'))
+		submission.run(os.path.join(log_dir, run_name + '.jobs'),foreground=True)
 	else:
-		submission.run(run_name + '.jobs')
+		submission.run(run_name + '.jobs',foreground=True)
 	
 	
 if __name__ == '__main__':
-	options, arguments = getopt.gnu_getopt(sys.argv[1:], 'fdaphl:n:m:c:', ['force', 'no_duplicates', 'no_archive', 'print', 'help', 'log', 'mail', 'peakcaller', 'snap', 'filtchr=', 'rmdups',])
-	force = False
-	print_cmds = False
-	log_dir = None
-	no_duplicates = False
-	archive_results = True
-	emails = []
-	run_name = 'Pipeline'
-	peakcaller = 'macs2'
+
+	from optparse import OptionParser
+	description = "Runs PeakSeq scoring pipeline for ChipSeq data. There are two positional arguments: 1) (Mandatory) The path to the control conf file, and 2) (Optional, but mostly used) The path to the sample conf file."
+	parser = OptionParser(description=description)
+	parser.add_option("-f","--force",action="store_true",help="forces running of pipeline, even if results already exist")
+	parser.add_option("-d","--no_duplicates",action="store_true",help="runs cross correlation analysis assuming duplicated reads have already been filtered out of the mapped reads.  Uncommon, so defaults to false.")
+	parser.add_option("-a","--no_archive",action="store_false",dest="archive_results",help="do not archive the control and sample results.")
+	parser.add_option("-p","--print",action="store_true",dest="print_cmds",help="prints the job commands, but does not dispatch them to the cluster")
+	parser.add_option("-l","--log",dest="log_dir",default=None,help="log directory, current working directory if not specified")
+	parser.add_option("-n","--name",dest="run_name",default="Pipeline",help="name for the pipeline run")
+	parser.add_option("-m","--mail",action="append",dest="emails",help="email address to send summary and result location")
+	parser.add_option("-g","--genome")
+	parser.add_option("-c","--peakcaller",default="macs2",help="specify the peakcaller to be used.  Current options are peakseq, macs,macs2, spp. Defaults to macs2.")
+	parser.add_option("--snap",action="store_true",help="make a call to the SNAP LIMS after completion")
+	parser.add_option("--rmdups",action="store_true",dest="remove_duplicates",help="Filter out all duplicate reads in sample read files before peakcalling.  Use when PCR amplification errors are present.  (i.e., PBC value is low)")
+	parser.add_option("--paired_end",action="store_true",help="Indicates that the input BAM files are paired-end.  Since the pipeline can't support PE mappings, it will filter out the reverse reads from the BAM files.")
+	parser.add_option("--rescore_control",default=0,type="int",help="The number of days old the control scoring should be in order for it to be rescored. This option is mainly used to rescore a control that is a paired-end (PE) and that was scored using all reads instead of just the forward reads.  So, this option would be helpfuf to used if the control is paired-end (PE). Up until May 2014, all scoring was done with both forward and reverse reads, so in order to rescore a control with just the forward reads, you'd wan't to incude the --paired-end option and set --rescore_control to the number of since since May 1, 2014.")
+	parser.add_option("--no-control-lock",action="store_true")
+	parser.add_option("--filtchr",help="SPP option to ignore a chromosome during analysis.  Used to fix bug that chrs with low read counts causes SPP to fail")
+
+	options,arguments = parser.parse_args()
+	
 	peakcaller_options = {}
 	xcorrelation_options = {}
-	remove_duplicates = False
-	for opt, arg in options:
-		if opt in ('-f', '--force'):
-			force = True
-		elif opt in ('-d', '--no_duplicates'):
-			no_duplicates = True
-		elif opt in ('-p', '--print'):
-			print_cmds = True
-		elif opt in ('-h', '--help'):
-			print __doc__
-			raise SystemExit(0)
-		elif opt in ('-l', '--log'):
-			log_dir = arg
-		elif opt in ('-n', '--name'):
-			run_name = arg
-		elif opt in ('-m', '--mail'):
-			emails.append(arg)
-		elif opt in ('-c', '--peakcaller'):
-			peakcaller = arg
-		elif opt in ('-s', '--snap'):
-			SNAP_RUN = True
-		elif opt in ('-a', '--no_archive'):
-			archive_results = False
-		elif opt in ('--rmdups'):
-			remove_duplicates = True
-		elif opt in ('--filtchr'):
-			if 'filtchr' in peakcaller_options:
-				peakcaller_options['filtchr'].append(arg)
-				xcorrelation_options['filtchr'].append(arg)
-			else:
-				peakcaller_options['filtchr'] = [arg,]
-				xcorrelation_options['filtchr'] = [arg,]
+	filtchr = options.filtchr
+	if filtchr:
+		if 'filtchr' in peakcaller_options:
+			peakcaller_options['filtchr'].append(filtchr)
+			xcorrelation_options['filtchr'].append(filtchr)
+		else:
+			peakcaller_options['filtchr'] = [filtchr,]
+			xcorrelation_options['filtchr'] = [filtchr,]
+
 	if len(arguments) < 1:
-		print "Usage:  pipeline.py [-f] [-d] [-a] [-p] [-h] [-c <peakcaller>] [-l <directory>] [-n <run_name>] [-m <email_address>] <control_config_file> [<sample_config_file> ...]"
-		raise SystemExit(1)	
+		parser.error("You must supply the control_conf_path argument. Optionally, the sample_conf_path may be specified as a 2nd argument.")
 	control_conf = arguments[0]
 	if len(arguments) > 1:
 		sample_conf = arguments[1]
 	else:
 		sample_conf = None
+
+	peakcaller = options.peakcaller
 	if peakcaller == 'peakseq':
 		import peakseq
 		peakcaller_module = peakseq
@@ -331,6 +468,7 @@ if __name__ == '__main__':
 		import macs
 		peakcaller_module = macs
 	elif peakcaller == 'macs2':
+		print 'running macs2 ...'
 		import macs2
 		peakcaller_module = macs2
 	elif peakcaller == 'spp':
@@ -340,7 +478,6 @@ if __name__ == '__main__':
 		import spp_nodups
 		peakcaller_module = spp_nodups
 	else:
-		print "Invalid Peakcaller selected.  Options are 'peakseq', 'macs', 'macs2',  'spp' or 'spp_nodups'"
-		raise SystemExit(1)	
-	
-	main(peakcaller_module, run_name, control_conf, sample_conf=sample_conf, force=force, print_cmds=print_cmds, log_dir=log_dir, no_duplicates=no_duplicates, archive_results=archive_results, emails=emails, peakcaller_options=peakcaller_options, xcorrelation_options=xcorrelation_options, remove_duplicates=remove_duplicates)
+		parser.error("Invalid Peakcaller selected.  Options are 'peakseq', 'macs', 'macs2',  'spp' or 'spp_nodups'")
+
+	main(peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)

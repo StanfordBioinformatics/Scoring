@@ -12,7 +12,7 @@ TMP_DIR = '/srv/gs1/projects/scg/Scoring/tmp/remaps'
 if __name__ == '__main__':
 	if len(sys.argv) < 4:
 		print "Usage:  remap_pipeline.py <fastqs_file> <genome_dir> <output_dir>"
-		raise SystemExit(0)
+		raise SystemExit(1)
 		
 	if not os.path.isdir(sys.argv[3]):
 		os.makedirs(sys.argv[3])

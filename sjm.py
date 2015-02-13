@@ -2,11 +2,14 @@
 
 import subprocess
 import os.path
+import sys
+import random
+import time
 
 SJM_COMMAND = 'sjm'
 
 class Job:
-	def __init__(self, name, commands, time=None, memory=None, queue=None, host=None, dependencies=None, project=None):
+	def __init__(self, name, commands, time=None, memory=None, queue=None, host=None, dependencies=None,modules = [], project=None, sched_options=None):
 		self.name = name
 		if not type(commands) is list:
 			self.commands = [commands,]
@@ -14,6 +17,7 @@ class Job:
 			self.commands = commands
 		self.time = time
 		self.memory = memory
+		self.modules = modules
 		self.queue = queue
 		self.host = host
 		if not dependencies:
@@ -21,11 +25,15 @@ class Job:
 		else:
 			self.dependencies = dependencies
 		self.project = project
+		self.sched_options = sched_options
 		
 	def job_definition(self):
 		'''Returns a string with the job definition in sjm format'''
 		output = 'job_begin\n'
 		output += '  name %s\n' % self.name
+		if self.modules:
+			for mod in self.modules:
+				output += "  module {mod}\n".format(mod=mod)
 		if self.time:
 			output += '  time %s\n' % str(self.time)
 		if self.memory:
@@ -42,11 +50,17 @@ class Job:
 			output += '  cmd_begin\n'
 			output += '    %s\n' % ' &&'.join(self.commands)
 			output += '  cmd_end\n'
+
+		output += '  sched_options %s\n' % str("-A chipseq_scoring")
 		output += 'job_end\n'
+
 		return output
 		
 	def add_dependency(self, job):
 		self.dependencies.append(job)
+
+	def add_module(module):
+		self.modules.append(module)
 		
 	def dependency_definition(self):
 		'''Returns a string with the dependency definition in sjm format'''
@@ -82,13 +96,30 @@ class Submission:
 		job_description_file.close()
 		return job_description_file
 
-	def run(self, job_description_file):
+	def run(self, job_description_file,foreground=False):
+		"""Run sjm jobs. Wait for sjm to complete."""
 		job_description_file = self.build(job_description_file)
 		
 		cmd = SJM_COMMAND
+		if foreground:
+			cmd += " -i"
 		if self.log_directory:
 			cmd += " -l %s " % os.path.join(self.log_directory, job_description_file.name + '.status.log')
 		for n in self.notify:
 			cmd += " --mail %s" % n
-		subprocess.call("%s %s" % (cmd, job_description_file.name), shell=True)
+		print("Running sjm command '%s %s\n'" % (cmd,job_description_file.name))
+		rand = str(random.random())
+		curTime = time.time()
+		ferr = open(str(curTime) + "_" + rand + "_sjm-run_stderr.txt","w")
+		try:
+			subprocess.check_call("%s %s" % (cmd, job_description_file.name), shell=True,stderr=ferr)
+		except subprocess.CalledProcessError as e:
+			msg = "Error with return code {retcode} while running command {cmd}:".format(retcode=e.returncode,cmd=e.cmd)
+			msg += open(ferr.name,'r').read()
+			sys.stderr.write(msg)
+			raise
+		finally:
+			os.remove(ferr.name)
+
+
 	

@@ -35,6 +35,7 @@ CONTROL_DB = cp.get('globals', 'CONTROL_DB')
 CONTROL_DB_PORT = int(cp.get('globals', 'CONTROL_DB_PORT'))
 GLOBAL_TMP_DIR = cp.get('globals', 'TMP_DIR')
 SAMTOOLS_BINARY = cp.get('globals', 'SAMTOOLS_BINARY')
+SCHED_OPTIONS = cp.get('globals', 'SCHED_OPTIONS')
 
 class ConfigSample:
 	
@@ -55,10 +56,10 @@ class ConfigSample:
 		replicate_sections.sort(key=lambda x: int(x[9:]))  # sort by replicate number e.g. replicate5
 		for s in replicate_sections:
 			self.REPLICATES.append(cp.get(s, 'mapped_reads').split(','))
+		#print("Replicate BAM files are: " + str(self.REPLICATES) + "\n")
 		
 		
 class ConfigControl:
-	
 	def __init__(self, config_file):
 		if not os.path.isfile(config_file):
 			raise Exception("Cannot find file %s" % config_file)

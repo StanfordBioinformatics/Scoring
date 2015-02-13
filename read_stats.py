@@ -47,7 +47,10 @@ def main(stats_file, sample_config_file):
 		mapped_reads_file=os.path.join(config.TEMP_DIR, config.RUN_NAME + '_' + allname, allname + '_merged_eland.txt'),
 		results_dir=os.path.join(config.RESULTS_DIR, 'All'))
 	replicates.append(all_replicates)
-	
+
+	if os.path.exists(stats_file):
+		os.remove(stats_file)	
+
 	sf = open(stats_file, 'a')
 	calc_stats(replicates, sf)
 	

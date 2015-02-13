@@ -14,6 +14,6 @@ if __name__ == '__main__':
 		
 	if not os.path.exists(sys.argv[2]):
 		print "Cannot find sample eland file %s, skipping scoring."  % sys.argv[2]
-		raise SystemExit(0)
+		raise SystemExit(1)
 		
 	subprocess.call(' '.join(sys.argv[1:]), shell=True)

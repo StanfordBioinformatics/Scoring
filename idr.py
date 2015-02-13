@@ -38,15 +38,18 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
 	if not options:
 		options = {}
 	cmds = []
-	for rep in sample.replicates:
+        ctr=1
+        for rep in sample.replicates:
+		#print rep.merged_file_location
+                print rep
 		# Convert merged and filtered eland file to tagAlign
 		rep.tagAlign = os.path.join(rep.temp_dir(sample), '%s.tagAlign' % rep.rep_name(sample))
 		cmd = os.path.join(SUBMISSION_BIN_DIR, 'convert2tagAlign.py')
-		cmd += ' %s' % rep.merged_file_location
-		cmd += ' %s' % rep.tagAlign
+		cmd += ' %s' %	 rep.merged_file_location
+	        cmd += ' %s' % rep.tagAlign
 		cmd += ' %s' % sample.genome
 		cmds.append(cmd)
-		
+	        print 'SPP Cmd 1 ', cmd	
 		# Run SPP
 		if no_duplicates:
 			cmd = SPP_BINARY_NO_DUPS
@@ -54,12 +57,18 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
 			cmd = SPP_BINARY
 		cmd += ' -rf' # overwrite plot files if exists
 		cmd += ' -c=%s' % rep.tagAlign
-		cmd += ' -savp'
+		cmd += ' -savp='
+                cmd += sample.results_dir 
+		cmd +='/rep' + str(ctr) + '.pdf' 
+		print '/rep' + str(ctr) + '.pdf'
 		cmd += ' -x=-50:40' # manually exclude fragment lengths [-50,40]
 		cmd += ' -out=%s' % sample.spp_stats
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
+		
+		print 'SPP Cmd: ', cmd 
+		ctr += 1
 		cmds.append(cmd)
 		
 	sample.add_jobs(name, [sjm.Job('x_correlation_' + sample.run_name, cmds, queue=QUEUE, project=PROJECT, memory='8G'),])

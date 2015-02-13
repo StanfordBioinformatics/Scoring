@@ -13,7 +13,7 @@ QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
 
 NAME = 'spp'
-USE_CONTROL_LOCK = False
+USE_CONTROL_LOCK = True
 
 from peakseq import archive_results
 
@@ -83,6 +83,8 @@ def run_peakcaller(name, control, sample, options=None):
 		spp_cmd += ' -savp'
 		spp_cmd += ' -x=-500:50' # exclude frag lengths within this range
 		spp_cmd += ' -out=%s' % os.path.join(r.results_dir(sample), 'phantomPeakStatsRep%s.tab' % r.rep_name(sample))
+		print "spp1"
+		print spp_cmd	
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
@@ -105,6 +107,7 @@ def run_peakcaller(name, control, sample, options=None):
 		spp_cmd += ' -savp'
 		spp_cmd += ' -x=-500:50' # exclude frag lengths within this range
 		spp_cmd += ' -out=%s' % os.path.join(r.results_dir(sample), 'phantomPeakStatsRep%s.tab' % r.rep_name(sample) + '_PR1')
+		print spp_cmd
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr

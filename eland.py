@@ -16,6 +16,7 @@ class ElandMatch:
 		self.match_code = match_code
 		
 	def number_of_mismatches(self):
+		print "ElandMatch: num_of_mm ...",self.match_code
 		if self.match_code == 'U0':
 			return 0
 		elif self.match_code == 'U1':
@@ -78,6 +79,7 @@ class ElandHit:
 				self.coordinate = int(self.coordinate) + (len(self.sequence) - max_length)
 				
 	def best_matches(self):
+
 		if self.match_code not in ['U0', 'U1', 'U2']:
 			return []
 		return[ElandMatch(self.chr_name, self.coordinate, self.strand, self.match_code),]
@@ -203,7 +205,6 @@ class ElandExtendedLine:
 		
 	def best_matches(self):
 		'''Returns list of matches with the lowest number of mismatches'''
-		
 		match_list = []
 		best_mismatch = 999
 		for m in self.matches:
@@ -311,7 +312,7 @@ class BwaSamParser:
 			strand = '-'
 		else:
 			strand = '+'
-		if flag & 0x0004 == 0x0004:
+		if flag & 0x0004 == 0x0004: #read unmapped
 			# No match
 			return BwaSamLine(
 							qname=fields[0],
@@ -349,7 +350,14 @@ class BwaSamParser:
 					h_strand = '+'
 					hs[1] = int(hs[1])
 				alt_hits.append(BwaAlternativeHit(hs[0], strand, hs[1], hs[2], int(hs[3])))
-			
+		
+		##nathankw - Sometime the X0 tag is absent from reads that are even marked as aligned properly. It seems to me that this occurs whenever there the edit distance is high, and 
+		## when the base quality string is a run of "###"
+		try:
+			num_best_hits=int(tags['X0'])
+		except KeyError: 
+			num_best_hits=0
+		
 		return BwaSamLine(
 							qname=fields[0],
 							strand=strand,
@@ -361,7 +369,7 @@ class BwaSamParser:
 							quality=fields[10],
 							edit_distance=tags['NM'],
 							mismatching_positions=tags['MD'],
-							num_best_hits=int(tags['X0']),
+							num_best_hits=num_best_hits,
 							num_mismatches=int(tags['XM']),
 							alternative_hits=alt_hits
 						)
@@ -539,11 +547,12 @@ class ElandFile:
 				return self.parser.parse(self.file.next())
 			except StopIteration:
 				raise StopIteration
-			except Exception, e:
-				# Just skip the line if there's a parsing error
-				sys.stderr.write(str(e) + '\n')
-				#return self.parser.parse(self.file.next())
-				continue
+###Very bad below trying to catch Exception!!
+#			except Exception, e:
+#				# Just skip the line if there's a parsing error
+#				sys.stderr.write(str(e) + '\n')
+#				#return self.parser.parse(self.file.next())
+#				continue
 			
 	def close(self):
 		self.file.close()
@@ -619,11 +628,12 @@ class BwaSamFile(ElandFile):
 					return self.parser.parse(line)
 				except:
 					continue
-			except Exception, e:
-				# Just skip the line if there's a parsing error
-				traceback.print_exc()
-				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
-				continue
+###Very bad below catching Exception!!!
+#			except Exception, e:
+#				# Just skip the line if there's a parsing error
+#				traceback.print_exc()
+#				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
+#				continue
 			
 class BowtieSamFile(ElandFile):
 
@@ -662,11 +672,12 @@ class BowtieSamFile(ElandFile):
 					return self.parser.parse(line)
 				except:
 					continue
-			except Exception, e:
-				# Just skip the line if there's a parsing error
-				traceback.print_exc()
-				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
-				continue
+###Very bad below trying to catch Exception!!
+#			except Exception, e:
+#				# Just skip the line if there's a parsing error
+#				traceback.print_exc()
+#				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
+#				continue
 				
 class ElandSamFile(ElandFile):
 
@@ -705,11 +716,12 @@ class ElandSamFile(ElandFile):
 					return self.parser.parse(line)
 				except:
 					continue
-			except Exception, e:
-				# Just skip the line if there's a parsing error
-				traceback.print_exc()
-				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
-				continue	
+###Very bad below trying to catch Exception!!
+#			except Exception, e:
+#				# Just skip the line if there's a parsing error
+#				traceback.print_exc()
+#				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
+#				continue	
 				
 class IlluminaSamFile(ElandFile):
 
@@ -748,12 +760,10 @@ class IlluminaSamFile(ElandFile):
 					return self.parser.parse(line)
 				except:
 					continue
-			except Exception, e:
-				# Just skip the line if there's a parsing error
-				traceback.print_exc()
-				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
-				continue	
+###Very bad below trying to catch Exception!!
+#			except Exception, e:
+#				# Just skip the line if there's a parsing error
+#				traceback.print_exc()
+#				sys.stderr.write(str(self.line_num) + ': ' + self.current_line + str(e) + '\n')
+#				continue	
 	
-			
-			
-		

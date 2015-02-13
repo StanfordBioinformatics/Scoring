@@ -2,6 +2,7 @@
 
 import sjm
 import os
+import sys
 
 import chr_maps
 import idr
@@ -15,28 +16,40 @@ PEAKSEQ_BINARY = conf.PEAKSEQ_BINARY
 BIN_SIZE = conf.PEAKSEQ_BIN_SIZE
 
 NAME = 'peakseq'
-USE_CONTROL_LOCK = False
+USE_CONTROL_LOCK = True
 
-def archive_results(name, results_dir, archive_file):
+def archive_results(name, results_dir, archive_file,force=False):
  	if os.path.exists(archive_file):
- 		raise Exception("Archive file %s already exists" % archive_file)
-	archive_cmd = '%s %s %s' % (os.path.join(BIN_DIR, 'archive_results.py'), results_dir, archive_file)
+		if not force:
+	 		raise Exception("Archive file %s already exists" % archive_file)
+	archive_cmd = '%s %s %s %s' % (os.path.join(BIN_DIR, 'archive_results.py'), results_dir, archive_file,force)
 	return sjm.Job('Archive_%s' % name, archive_cmd, queue=QUEUE, project=PROJECT)
 
-def check_control_inputs(control):
+def check_control_inputs(control,force):
+	"""
+	Function : Checks for existance of
+						 1) genome, and 
+						 2) mapped reads files.
+						 Both must exist, or else an Exception is raised.
+						 Checks whether control.archive_file exists. If as and the force argument is False, then an Exception is raised
+						 because the archive will not be overwritten unless force is True.
+	"""
 	if control.genome not in chr_maps.genomes:
 		raise Exception("Genome %s not found. Valid genomes: %s" % (control.genome, ' '.join(chr_maps.genomes.keys())))
 	for mr in control.mapped_read_files:
 		if not os.path.exists(mr):
 			raise Exception("Cannot find mapped reads file %s" % mr)
 	if os.path.exists(control.archive_file):
-		raise Exception("Archive of control results already exists as %s" % control.archive_file)
+		if not force:
+			raise Exception("Archive of control results already exists as %s" % control.archive_file)
 		
-def check_sample_inputs(sample):
+def check_sample_inputs(sample,force):
 	if os.path.exists(os.path.join(sample.results_dir, 'rep_stats')):
-		raise Exception("Sample results non-empty.")
+		if not force:
+			raise Exception("Sample results non-empty.")
 	if os.path.exists(sample.archive_file):
-		raise Exception("Archive of sample results already exists as %s" % sample.archive_file)
+		if not force:
+			raise Exception("Archive of sample results already exists as %s" % sample.archive_file)
 	if not sample.genome in chr_maps.peakseq_mappability_file:
 		raise Exception("PeakSeq mappability file not defined in chr_maps.py")
 	if not os.path.exists(chr_maps.peakseq_mappability_file[sample.genome]):
@@ -59,12 +72,17 @@ def prep_sample(sample):
 		os.makedirs(sample.temp_dir)
 		
 def form_control_files(name, control):
+	print " ******* form control files ****** "
 	cmds = []
 	control.merged_file_location = os.path.join(control.temp_dir, '%s_merged_eland.txt' % control.run_name)
-	
+        print " merged conrol files ", control.merged_file_location	
 	# Merge eland files
 	cmd = os.path.join(BIN_DIR, 'merge_and_filter_reads.py')
+
 	cmd += ' %s' % control.merged_file_location
+
+	print " merged conrol files ", cmd
+	#sys.exit()
 	for mr in control.mapped_read_files:
 		cmd += ' %s' % mr
 	cmds.append(cmd)
@@ -82,8 +100,10 @@ def form_control_files(name, control):
 	
 def form_sample_files(name, sample):
 	jobs = []
+	print " peakseq: form sample files ***"
 	for rep in sample.replicates:
 		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample), queue=QUEUE, project=PROJECT))
+	
 	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample), queue=QUEUE, project=PROJECT))
 	sample.add_jobs(name, jobs)
 				
@@ -96,18 +116,24 @@ def form_replicate_files(rep, sample):
 		os.makedirs(rep.results_dir(sample))
 	if not os.path.exists(rep.sgr_dir(sample)):
 		os.makedirs(rep.sgr_dir(sample))
+
+	#print "dirs 1: ", rep.temp_dir(sample), " 2: ", rep.results_dir(sample), " 3: ", rep.sgr_dir(sample)
 	# Merge and filter
 	rep.merged_file_location = os.path.join(rep.temp_dir(sample), rep.rep_name(sample) + '_merged_eland.txt')
 	cmd = os.path.join(BIN_DIR, 'merge_and_filter_reads.py')
 	cmd += ' %s' % rep.merged_file_location
 	for f in rep.mapped_read_files:
+		print "In peakseq.py, replicate mapped read file is: %s\n" % f
 		cmd += ' %s' % f
+		print "cmd:  ",cmd
 	cmds.append(cmd)
+
 	# Divide by chr
 	cmd = os.path.join(BIN_DIR, 'divide_eland.py')
 	cmd += ' %s %s %s' % (rep.merged_file_location, sample.genome, rep.temp_dir(sample))
 	cmds.append(cmd)
-	
+	print "cmd div by chr ",cmd
+
 	# Make Pseudoreplicates
 	rep.pr1_name = rep.rep_name(sample) + '_PR1'
 	rep.pr1_results_dir = os.path.join(sample.results_dir, rep.pr1_name)
@@ -128,12 +154,15 @@ def form_replicate_files(rep, sample):
 	cmd = os.path.join(BIN_DIR, 'shuffle_mapped_reads.py')
 	cmd += ' %s %s %s' % (rep.merged_file_location, rep.pr1_merged, rep.pr2_merged)
 	cmds.append(cmd)
+
 	cmd = os.path.join(BIN_DIR, 'divide_eland.py')
 	cmd += ' %s %s %s' % (rep.pr1_merged, sample.genome, rep.temp_dir(sample))
 	cmds.append(cmd)
+
 	cmd = os.path.join(BIN_DIR, 'divide_eland.py')
 	cmd += ' %s %s %s' % (rep.pr2_merged, sample.genome, rep.temp_dir(sample))
 	cmds.append(cmd)
+
 	return cmds
 	
 def complete_control(name, control):
@@ -142,30 +171,34 @@ def complete_control(name, control):
 		cmd += os.path.join(BIN_DIR, 'complete_control_scoring.py')
 		cmd += ' %s' % control.results_dir
 		cmd += ' %s' % control.peakcaller
+		print "complete control", cmd
 		control.add_jobs(name, [sjm.Job('complete_control', [cmd,], queue=QUEUE, project=PROJECT, host='localhost'),])
 			
-def archive_control(name, control):
-	control.add_jobs(name, [archive_results(control.run_name, control.results_dir, control.archive_file),])
+def archive_control(name, control,force):
+	control.add_jobs(name, [archive_results(control.run_name, control.results_dir, control.archive_file,force=force),])
 	
-def archive_sample(name, sample, control):
+def archive_sample(name, sample, control,force):
 	# Put archive file locations in stats file for SNAP
 	f = open(os.path.join(sample.results_dir, 'rep_stats'), 'a')
 	f.write('sample_tar_complete=%s\n' % sample.archive_file)
 	f.write('control_tar_complete=%s\n' % control.archive_file)
 	f.close()
 	
-	sample.add_jobs(name, [archive_results(sample.run_name, sample.results_dir, sample.archive_file),])
+	sample.add_jobs(name, [archive_results(sample.run_name, sample.results_dir, sample.archive_file,force=force),])
 	
 def calc_pbc(name, control, sample):
 	pbc_stats_file = os.path.join(sample.results_dir, 'pbc_stats.txt')
+	if os.path.exists(pbc_stats_file):
+		os.remove(pbc_stats_file)
 	cmds = []
 	for r in sample.replicates:
 		cmd = "python " + os.path.join(BIN_DIR, 'calc_pbc.py')
 		cmd += ' %s' % r.merged_file_location
 		cmd += ' %s' % pbc_stats_file
 		cmd += ' %s' % r.rep_name(sample)
+		
 		cmds.append(cmd)
-	sample.add_jobs(name, [sjm.Job('calc_pbc', cmds, queue=QUEUE, project=PROJECT, memory='6G'),])
+	sample.add_jobs(name, [sjm.Job('calc_pbc', cmds, queue=QUEUE, project=PROJECT, memory='10G'),])
 	
 def run_peakcaller(name, control, sample, options=None):
 	if not options:
@@ -296,7 +329,9 @@ def mail_results(sample, control, run_name, emails):
 	cmd += ' %s' % os.path.join(sample.results_dir, 'rep_stats')
 	cmd += ' %s' % os.path.join(sample.results_dir, 'spp_stats.txt')
 	cmd += ' %s' % os.path.join(sample.results_dir, 'idr_results.txt')
+	cmd += ' %s' % os.path.join(sample.results_dir, 'pbc_stats.txt')
 	cmd += ' %s' % os.path.join(sample.results_dir, 'full_report.txt')
+	
 	cmds.append(cmd)
 	
 	cmd = os.path.join(BIN_DIR, 'mail_wrapper.py')

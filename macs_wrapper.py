@@ -1,6 +1,7 @@
 #!/bin/env python
 
 import sys
+import os
 import subprocess
 
 def main(x_correlation_file, rep_name, macs_cmd):
@@ -8,8 +9,17 @@ def main(x_correlation_file, rep_name, macs_cmd):
 	macs_cmd = ' '.join(macs_cmd)
 	if frag_length > 10:
 		macs_cmd += ' --nomodel --shiftsize=%i' % (frag_length/2)
-	print macs_cmd
-	subprocess.call(macs_cmd, shell=True)
+	ferr = open("macs_cmd_stderr.txt","w")
+	try:
+		subprocess.check_call(macs_cmd, shell=True,stderr=ferr)
+	except subprocess.CalledProcessError as e:
+		msg = "Error with return code {retcode} while running command {cmd}:".format(retcode=e.returncode,cmd=e.cmd)
+		msg += open(ferr.name,'r').read()
+		sys.stderr.write(msg)
+		raise
+	finally:
+		os.remove(ferr.name)
+		
 	
 def get_frag_length(x_correlation_file, rep_name):
 	f = open(x_correlation_file, 'r')

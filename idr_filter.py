@@ -26,13 +26,13 @@ def num_hits(idr_hit_list, idr_threshold):
 	f.close()
 	return num_hits
 	
-def hit_cmd(unfiltered_pooled_hits, num_hits, output_file):
+def hit_cmd(unfiltered_pooled_hits, num_hits, output_file, sort_column):
 	sorted_hits = unfiltered_pooled_hits + '.sorted'
 	if not os.path.exists(sorted_hits):
-		subprocess.call('sort -k5nr,5nr %s > %s' % (unfiltered_pooled_hits, sorted_hits), shell=True)
+		subprocess.call('sort -k%inr,%inr %s > %s' % (sort_column, sort_column, unfiltered_pooled_hits, sorted_hits), shell=True)
 	subprocess.call('head -n %i %s > %s' % (num_hits, sorted_hits, output_file), shell=True)
 
-def main(sample_name, genome, num_reps, idr_dir, unfiltered_pooled_hits, output_dir):
+def main(sample_name, genome, num_reps, idr_dir, unfiltered_pooled_hits, output_dir, sort_column):
 	idr_results = open(os.path.join(output_dir, 'idr_results.txt'), 'w')
 	
 	if num_reps > 1:
@@ -61,16 +61,16 @@ def main(sample_name, genome, num_reps, idr_dir, unfiltered_pooled_hits, output_
 	else:
 		max_rep_hits = 0
 	cons_file = os.path.join(output_dir, '%s_conservative_narrowPeak.bed' % sample_name)
-	hit_cmd(unfiltered_pooled_hits, max_rep_hits, cons_file)
+	hit_cmd(unfiltered_pooled_hits, max_rep_hits, cons_file, sort_column)
 	opt_file = os.path.join(output_dir, '%s_optimal_narrowPeak.bed' % sample_name)
-	hit_cmd(unfiltered_pooled_hits, max(num_peaks_pooled, max_rep_hits), opt_file)
+	hit_cmd(unfiltered_pooled_hits, max(num_peaks_pooled, max_rep_hits), opt_file, sort_column)
 	
 	
 	
 	
 if __name__=='__main__':
-	if not len(sys.argv) == 7:
-		print "Usage:  idr_filter.py <sample name> <genome> <number of replicates> <idr directory> <unfiltered pooled hits file> <output directory>"
+	if not len(sys.argv) == 8:
+		print "Usage:  idr_filter.py <sample name> <genome> <number of replicates> <idr directory> <unfiltered pooled hits file> <output directory> <sort_column>"
 		raise SystemExit(1)
 	
-	main(sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5], sys.argv[6])
+	main(sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5], sys.argv[6], int(sys.argv[7]))

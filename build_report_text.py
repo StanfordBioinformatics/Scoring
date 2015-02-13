@@ -1,13 +1,14 @@
 #!/bin/env python
 
 import sys
+import os
 
 class RepStats:
 	def __init__(self):
 		self.rep_overlap = []
 		self.total_hits = '0'
 
-def main(run_name, sample_archive, control_archive, rep_stats_file, spp_stats_file, idr_stats_file, output_file):
+def main(run_name, sample_archive, control_archive,spp_stats_file, idr_stats_file, pbc_file, output_file,rep_stats_file=None):
 	out = open(output_file, 'w')
 	out.write('Scoring results for %s\n\n' % run_name)
 	out.write('Full results available at:\n%s\n%s\n\n' % (control_archive, sample_archive))
@@ -40,52 +41,63 @@ def main(run_name, sample_archive, control_archive, rep_stats_file, spp_stats_fi
 		out.write('%s,  %s hits\n' % (rep, num_hits))
 	idr.close()
 	
-	out.write('\n*** Replicate Statistics ***\n')
-	rep_stats = open(rep_stats_file, 'r')
-	rep_overlaps = {}
-	for line in rep_stats:
-		fields = line.rstrip('\n').split('=')
-		if fields[0] == 'num_reads' and fields[2] != '0':
-			out.write(fields[1] + ' Uniquely Mapped Reads: %s\n' % fields[2])
-		if fields[0] == 'read_files' and fields[2] != '[]':
-			out.write(fields[1] + ' Read Files: ')
-			rfs = eval(fields[2])
-			for rf in rfs:
-				out.write(rf.split('/')[-1] + ' ')
-			out.write('\n')
-		
-		if fields[0] == 'rep_overlap' or fields[0] == 'total_hits1' or fields[0] == 'total_hits2':
-			rep = fields[1].split('_VS_')[0]
-			q_value = fields[1].split('_')[-1]
-			# Set up stats container
-			if rep not in rep_overlaps:
-				rep_overlaps[rep] = {q_value: RepStats()}
-			elif q_value not in rep_overlaps[rep]:
-				rep_overlaps[rep][q_value] = RepStats()
-			# Put data in container
-			if fields[0] == 'rep_overlap':
-				rep_overlaps[rep][q_value].rep_overlap.append((fields[1], fields[2]))
-			if fields[0] == 'total_hits1':
-				rep_overlaps[rep][q_value].total_hits = fields[2]
-	
-	out.write('\n')
-	for rep in sorted(rep_overlaps.keys()):
-		out.write(rep + '\n')
-		for q_value in sorted(rep_overlaps[rep].keys()):
-			out.write('Q-Value: ' + q_value + '\n')
-			out.write('\tTotal Hits: %s\n' % rep_overlaps[rep][q_value].total_hits)
-			for ro in rep_overlaps[rep][q_value].rep_overlap:
-				out.write('\t%s: %s\n' % (ro[0], ro[1]))
-		out.write('\n')
+	out.write('*** PBC Results ***\n')
+	pbc = open(pbc_file)
+	for line in pbc:
+		fields = line.rstrip('\n').split('\t')
+		out.write(fields[0] + '\n')
+		out.write('\tGenomic Locations (one read): %s\n' % fields[1])
+		out.write('\tGenomic Locations (Total Mapped): %s\n' % fields[2])
+		out.write('\tPercent of One Read Maps: %s\n' % fields[3])
+	pbc.close()
+
+	if rep_stats_file:
+		if not os.path.exists(rep_stats_file):
+			sys.stderr.write("\nWARNING: Rep stats file {rep_stats} does not exist!\n".format(rep_stats=rep_stats_file))
+		else:
+			out.write('\n*** Replicate Statistics ***\n')
+			rep_stats = open(rep_stats_file, 'r')
+			rep_overlaps = {}
+			for line in rep_stats:
+				fields = line.rstrip('\n').split('=')
+				if fields[0] == 'num_reads' and fields[2] != '0':
+					out.write(fields[1] + ' Uniquely Mapped Reads: %s\n' % fields[2])
+				if fields[0] == 'read_files' and fields[2] != '[]':
+					out.write(fields[1] + ' Read Files: ')
+					rfs = eval(fields[2])
+					for rf in rfs:
+						out.write(rf.split('/')[-1] + ' ')
+					out.write('\n')
 				
-	out.close()
-	
-	
-	
-if __name__ == '__main__':
-	if not len(sys.argv) == 8:
-		print "Usage: build_report_text.py <run_name> <sample_archive> <control_archive> <rep_stats_file> <spp_stats_file> <idr_stats_file> <output_file>"
-		raise SystemExit(1)
+				if fields[0] == 'rep_overlap' or fields[0] == 'total_hits1' or fields[0] == 'total_hits2':
+					rep = fields[1].split('_VS_')[0]
+					q_value = fields[1].split('_')[-1]
+					# Set up stats container
+					if rep not in rep_overlaps:
+						rep_overlaps[rep] = {q_value: RepStats()}
+					elif q_value not in rep_overlaps[rep]:
+						rep_overlaps[rep][q_value] = RepStats()
+					# Put data in container
+					if fields[0] == 'rep_overlap':
+						rep_overlaps[rep][q_value].rep_overlap.append((fields[1], fields[2]))
+					if fields[0] == 'total_hits1':
+						rep_overlaps[rep][q_value].total_hits = fields[2]
 		
-	main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
+			out.write('\n')
+			for rep in sorted(rep_overlaps.keys()):
+				out.write(rep + '\n')
+				for q_value in sorted(rep_overlaps[rep].keys()):
+					out.write('Q-Value: ' + q_value + '\n')
+					out.write('\tTotal Hits: %s\n' % rep_overlaps[rep][q_value].total_hits)
+					for ro in rep_overlaps[rep][q_value].rep_overlap:
+						out.write('\t%s: %s\n' % (ro[0], ro[1]))
+				out.write('\n')
+	out.close()
+
+if __name__ == '__main__':
+	if not len(sys.argv) == 9:
+		print "Usage: build_report_text.py <run_name> <sample_archive> <control_archive> <rep_stats_file> <spp_stats_file> <idr_stats_file> <pbc_file> <output_file>"
+		raise SystemExit("Arguements supplied and arguments required do not match.")
+		
+	main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8],sys.argv[4])
 	
