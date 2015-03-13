@@ -44,7 +44,7 @@ def form_control_files(name, control):
 	cmd += ' %s' % control.genome
 	cmds.append(cmd)
 	
-	j = sjm.Job(control.run_name, cmds, queue=QUEUE)
+	j = sjm.Job(control.run_name, cmds, queue=QUEUE,memory="12G",sched_options="-m e")
 	control.add_jobs(name, [j,])
 
 from peakseq import form_sample_files
@@ -88,7 +88,7 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample), [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample), [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results = os.path.join(r.results_dir(sample), r.rep_name(sample) + '_VS_' + control.run_name + '_merged.regionPeak.gz')
 		
 		# Pseudoreplicate Runs
@@ -111,7 +111,7 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR1', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR1', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results_pr1 = os.path.join(r.pr1_results_dir, r.rep_name(sample) + '_PR1_VS_' + control.run_name + '_merged.regionPeak.gz')
 		
 		r.merged_ta_pr2 = os.path.join(r.temp_dir(sample), '%s_PR2.tagAlign' % r.rep_name(sample))
@@ -132,7 +132,7 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR2', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR2', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results_pr2 = os.path.join(r.pr2_results_dir, r.rep_name(sample) + '_PR2_VS_' + control.run_name + '_merged.regionPeak.gz')
 	sample.add_jobs(name, jobs)
 	
@@ -143,11 +143,11 @@ def merge_results(name, sample):
 		r.unfiltered_results_pr1 = os.path.join(r.pr1_results_dir, '%s_PR1_peaks.regionPeak' % r.rep_name(sample))
 		r.unfiltered_results_pr2 = os.path.join(r.pr2_results_dir, '%s_PR2_peaks.regionPeak' % r.rep_name(sample))
 		unpack_cmds = ['zcat %s > %s' % (r.spp_results, r.unfiltered_results), 'zcat %s > %s' % (r.spp_results_pr1, r.unfiltered_results_pr1), 'zcat %s > %s' % (r.spp_results_pr2, r.unfiltered_results_pr2),]
-		jobs.append(sjm.Job('merge_results_%s' % r.rep_name(sample), unpack_cmds, queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job('merge_results_%s' % r.rep_name(sample), unpack_cmds, queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	sample.add_jobs(name, jobs)
 
 def replicate_scoring(name, sample):
-	j = sjm.Job('replicate_scoring', ['echo replicate_scoring',], host='localhost', queue=QUEUE, project=PROJECT)
+	j = sjm.Job('replicate_scoring', ['echo replicate_scoring',], host='localhost', queue=QUEUE, project=PROJECT,sched_options="-m e")
 	sample.add_jobs(name, [j,])
 	
 def form_idr_inputs(name, sample):
@@ -157,7 +157,7 @@ def form_idr_inputs(name, sample):
 		rep.narrowPeak = rep.unfiltered_results
 		rep.narrowPeak_pr1 = rep.unfiltered_results_pr1
 		rep.narrowPeak_pr2 = rep.unfiltered_results_pr2
-	sample.add_jobs(name, [sjm.Job('form_idr_inputs', ['echo form_idr_inputs',], queue=QUEUE, project=PROJECT, host='localhost'),])
+	sample.add_jobs(name, [sjm.Job('form_idr_inputs', ['echo form_idr_inputs',], queue=QUEUE, project=PROJECT, host='localhost',sched_options="-m e"),])
 
 from peakseq import mail_results
 
@@ -170,17 +170,17 @@ def idr_analysis(name, sample):
 			rep_b = sample.replicates[j]
 			idr_name = '%s_VS_%s' % (rep_a.rep_name(sample), rep_b.rep_name(sample))
 			cmd = idr.idr_analysis_cmd(rep_a.narrowPeak, rep_b.narrowPeak, os.path.join(sample.idr_dir, idr_name), 'signal.value', sample.genome)
-			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 			
 		# Pseudoreplicates
 		idr_name = '%s_PR1_VS_%s_PR2' % (rep_a.rep_name(sample), rep_a.rep_name(sample))
 		cmd = idr.idr_analysis_cmd(rep_a.narrowPeak_pr1, rep_a.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name+'_PR'), 'signal.value', sample.genome)
-		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 		
 	# Pooled Pseudoreplicates
 	idr_name = '%s_PR1_VS_%s_PR2' % (sample.combined_replicate.rep_name(sample), sample.combined_replicate.rep_name(sample))
 	cmd = idr.idr_analysis_cmd(sample.combined_replicate.narrowPeak_pr1, sample.combined_replicate.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name), 'signal.value', sample.genome)
-	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	
 	sample.add_jobs(name, jobs)
 
@@ -193,5 +193,5 @@ def idr_filter(name, sample):
 	cmd += ' %s' % os.path.join(os.path.join(sample.results_dir, 'All'), sample.combined_replicate.unfiltered_results)
 	cmd += ' %s' % sample.results_dir
 	cmd += ' 7' # sort column (signal.value)
-	sample.add_jobs(name, [sjm.Job('idr_filter_' + sample.run_name, [cmd,], queue=QUEUE, project=PROJECT),])
+	sample.add_jobs(name, [sjm.Job('idr_filter_' + sample.run_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 		

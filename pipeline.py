@@ -1,5 +1,6 @@
 #!/bin/env python
 
+import subprocess
 import datetime
 import time
 import glob
@@ -149,14 +150,13 @@ def checkControlScored(control):
 		elandFile = elandFile[0]
 	else:
 		return False
-	return getFileAgeHours(elandFile)
+	return getFileAgeMinutes(elandFile)
 
-def getFileAgeHours(infile):
+def getFileAgeMinutes(infile):
 	"""
 	Function : Calculates the age of a file in hours. Partial hours are always rounded down a whole number.
 	Raises an IOError of the input file doens't exist.
 	"""
-	print "##" + infile + "##"
 	if not os.path.exists(infile):
 		raise IOError("Can't check age of non-existant file '{infile}'".format(infile=infile))
 	mtime = datetime.datetime.fromtimestamp(os.path.getmtime(infile))
@@ -164,8 +164,7 @@ def getFileAgeHours(infile):
 	diff = now - mtime
 	seconds = diff.total_seconds()
 	minutes = seconds/60
-	hours = minutes/60
-	return hours	
+	return minutes
 	
 	
 def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
@@ -243,7 +242,6 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False,
 		for i in all_mapped_reads:
 			frf = i.rstrip(".bam") + forwardReadExt		
 			frf_progress = i.rstrip(".bam") + progressReadExt
-			print("###" + frf + "###")
 			if os.path.exists(frf) or os.path.exists(frf_progress):
 				bamDone = False
 				countLimit = 5
@@ -251,22 +249,29 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False,
 				while count < countLimit:
 					count += 1
 					try:
-						age = getFileAgeHours(frf)
+						age = getFileAgeMinutes(frf)
 					except IOError:
 						age = 0
+						try:
+							progressFileAge = getFileAgeMinutes(frf_progress)
+						except IoError:
+							progressFileAge=0
+						if (progressFileAge >= 20) or (progressfileAge == 0):
+							raise Exception("Expected to find forward reads file {frf} since the progress sentinal file {frf_progress} is present, but unable to do so.".format(frf=frf,frf_progress=frf_progress))
 						pass
-					if age >= 1:
+					if age >= 20:
 						bamDone = True
 						break
 					else:
 						#sleep an hour
-						time.sleep(3600)
+						time.sleep(600)
 				if not bamDone:
 					raise Exception("Waited too long for BAM file {} from other project to finish to finish being made. Exiting.".format(frf))
 			else:
+				print("Need to create a single-end reads only file from file {frf}.".format(frf=frf))
 				cmd = "samtools view -hbF 0x40 {peFile} > {seFile}".format(peFile=i,seFile=frf)
 				jobname = "toSingleEnd_{0}".format(os.path.basename(i))
-				job = sjm.Job(jobname,cmd,modules = ["samtools"],queue=conf.QUEUE,memory="5G")
+				job = sjm.Job(jobname,cmd,modules = ["samtools"],queue=conf.QUEUE,memory="5G",sched_options="-m e")
 				jobs.append(job)
 		if jobs:
 			submission = sjm.Submission(jobs=jobs,log_directory=log_dir,notify=SJM_NOTIFY)		
@@ -401,7 +406,7 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False,
 	#jobs.append(peakcaller.cleanup(sample, control))
 	
 	if SNAP_RUN and sample_conf:
-		snap_job = sjm.Job("SNAP", "bash /srv/gs1/apps/snap_support/production/current/peakseq_report_parser_wrapper.sh production %s >& %s/peakseq_report_out " % (sample_conf.path,sample_conf.RESULTS_DIR),  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs(), sched_options='-A chipseq_scoring')
+		snap_job = sjm.Job("SNAP", "bash /srv/gs1/apps/snap_support/production/current/peakseq_report_parser_wrapper.sh production %s >& %s/peakseq_report_out " % (sample_conf.path,sample_conf.RESULTS_DIR),  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs(), sched_options='-m e -A chipseq_scoring')
 		jobs.append(snap_job)
 				
 	if control.jobs:

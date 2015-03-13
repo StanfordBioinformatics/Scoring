@@ -23,7 +23,7 @@ def archive_results(name, results_dir, archive_file,force=False):
 		if not force:
 	 		raise Exception("Archive file %s already exists" % archive_file)
 	archive_cmd = '%s %s %s %s' % (os.path.join(BIN_DIR, 'archive_results.py'), results_dir, archive_file,force)
-	return sjm.Job('Archive_%s' % name, archive_cmd, queue=QUEUE, project=PROJECT)
+	return sjm.Job('Archive_%s' % name, archive_cmd, queue=QUEUE, project=PROJECT,sched_options="-m e")
 
 def check_control_inputs(control,force):
 	"""
@@ -96,15 +96,15 @@ def form_control_files(name, control):
 	cmd = os.path.join(BIN_DIR, 'create_signal_map.py')
 	cmd += ' %s %s' % (control.sgr_dir, control.results_dir)
 	cmds.append(cmd)
-	control.add_jobs(name, [sjm.Job(control.run_name, cmds, queue=QUEUE, project=PROJECT),])
+	control.add_jobs(name, [sjm.Job(control.run_name, cmds, queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 	
 def form_sample_files(name, sample):
 	jobs = []
 	print " peakseq: form sample files ***"
 	for rep in sample.replicates:
-		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample), queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample), queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	
-	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample), queue=QUEUE, project=PROJECT))
+	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample), queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	sample.add_jobs(name, jobs)
 				
 def form_replicate_files(rep, sample):
@@ -172,7 +172,7 @@ def complete_control(name, control):
 		cmd += ' %s' % control.results_dir
 		cmd += ' %s' % control.peakcaller
 		print "complete control", cmd
-		control.add_jobs(name, [sjm.Job('complete_control', [cmd,], queue=QUEUE, project=PROJECT, host='localhost'),])
+		control.add_jobs(name, [sjm.Job('complete_control', [cmd,], queue=QUEUE, project=PROJECT, host='localhost',sched_options="-m e"),])
 			
 def archive_control(name, control,force):
 	control.add_jobs(name, [archive_results(control.run_name, control.results_dir, control.archive_file,force=force),])
@@ -198,7 +198,7 @@ def calc_pbc(name, control, sample):
 		cmd += ' %s' % r.rep_name(sample)
 		
 		cmds.append(cmd)
-	sample.add_jobs(name, [sjm.Job('calc_pbc', cmds, queue=QUEUE, project=PROJECT, memory='10G'),])
+	sample.add_jobs(name, [sjm.Job('calc_pbc', cmds, queue=QUEUE, project=PROJECT, memory='10G',sched_options="-m e"),])
 	
 def run_peakcaller(name, control, sample, options=None):
 	if not options:
@@ -217,7 +217,7 @@ def run_peakcaller(name, control, sample, options=None):
 				BIN_SIZE,
 				mappability_file,)
 			cmd = os.path.join(BIN_DIR, 'peakseq_wrapper.py') + ' ' + cmd
-			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT),])
+			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 			
 			# Pseudoreplicate Runs
 			input = os.path.join(r.temp_dir(sample), '%s_eland.txt' % chr)
@@ -229,7 +229,7 @@ def run_peakcaller(name, control, sample, options=None):
 				BIN_SIZE,
 				mappability_file,)
 			cmd = os.path.join(BIN_DIR, 'peakseq_wrapper.py') + ' ' + cmd
-			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_PR1_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT),])
+			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_PR1_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 			
 			input = os.path.join(r.temp_dir(sample), '%s_eland.txt' % chr)
 			cmd = PEAKSEQ_BINARY + " %s %s %s %s %s %s" % (
@@ -240,7 +240,7 @@ def run_peakcaller(name, control, sample, options=None):
 				BIN_SIZE,
 				mappability_file,)
 			cmd = os.path.join(BIN_DIR, 'peakseq_wrapper.py') + ' ' + cmd
-			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_PR2_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT),])
+			sample.add_jobs(name, [sjm.Job(r.rep_name(sample) + '_PR2_%s' % chr, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 	
 def merge_results(name, sample):
 	for r in sample.replicates + [sample.combined_replicate,]:
@@ -251,17 +251,17 @@ def merge_results(name, sample):
 				output = os.path.join(r.results_dir(sample), '%s_hits_filtered.bed' % r.rep_name(sample))
 				r.unfiltered_results = output
 			cmd = filter_hits_cmd(r.results_dir(sample), r.sgr_dir(sample), sample.genome, output, q_val)
-			sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '%g' % (q_val), [cmd,], queue=QUEUE, project=PROJECT),])
+			sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '%g' % (q_val), [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 	
 		# Merge Pseudoreplicate Hits
 		output = os.path.join(r.results_dir(sample), '%s_hits.bed' % (r.rep_name(sample) + '_PR1'))
 		r.unfiltered_results_pr1 = output
 		cmd = filter_hits_cmd(r.pr1_results_dir, r.pr1_sgr_dir, sample.genome, output)
-		sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '_PR1', [cmd,], queue=QUEUE, project=PROJECT),])
+		sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '_PR1', [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 		output = os.path.join(r.results_dir(sample), '%s_hits.bed' % (r.rep_name(sample) + '_PR2'))
 		r.unfiltered_results_pr2 = output
 		cmd = filter_hits_cmd(r.pr1_results_dir, r.pr1_sgr_dir, sample.genome, output)
-		sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '_PR2', [cmd,], queue=QUEUE, project=PROJECT),])
+		sample.add_jobs(name, [sjm.Job('merge_' + r.rep_name(sample) + '_PR2', [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])
 				
 def filter_hits_cmd(results_dir, sgr_dir, genome, output, q_val=None):
 	cmd = os.path.join(BIN_DIR, 'filter_hits.py')
@@ -295,7 +295,7 @@ def replicate_scoring(name, sample):
 				cmd += ' %s_VS_%s_%f' % (r1.rep_name(sample), r2.rep_name(sample), q)
 				cmds.append(cmd)
 				
-	j = sjm.Job('replicate_stats', cmds, queue=QUEUE, project=PROJECT)
+	j = sjm.Job('replicate_stats', cmds, queue=QUEUE, project=PROJECT,sched_options="-m e")
 	sample.add_jobs(name, [j,])
 	
 def form_idr_inputs(name, sample):
@@ -305,18 +305,18 @@ def form_idr_inputs(name, sample):
 		rep.narrowPeak = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_unfiltered_narrowPeak.bed')
 		cmd = os.path.join(SUBMISSION_BIN_DIR, 'normalhits2narrowPeak')
 		cmd += ' %s > %s' % (rep.unfiltered_results, rep.narrowPeak)
-		jobs.append(sjm.Job(rep.rep_name(sample) + '_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job(rep.rep_name(sample) + '_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 		
 		# Pseudoreplicates
 		rep.narrowPeak_pr1 = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_PR1_unfiltered_narrowPeak.bed')
 		cmd = os.path.join(SUBMISSION_BIN_DIR, 'normalhits2narrowPeak')
 		cmd += ' %s > %s' % (rep.unfiltered_results_pr1, rep.narrowPeak_pr1)
-		jobs.append(sjm.Job(rep.rep_name(sample) + '_PR1_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job(rep.rep_name(sample) + '_PR1_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 		
 		rep.narrowPeak_pr2 = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_PR2_unfiltered_narrowPeak.bed')
 		cmd = os.path.join(SUBMISSION_BIN_DIR, 'normalhits2narrowPeak')
 		cmd += ' %s > %s' % (rep.unfiltered_results_pr2, rep.narrowPeak_pr2)
-		jobs.append(sjm.Job(rep.rep_name(sample) + '_PR2_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job(rep.rep_name(sample) + '_PR2_hits2narrowPeak', [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	
 	sample.add_jobs(name, jobs)
 
@@ -341,7 +341,7 @@ def mail_results(sample, control, run_name, emails):
 		cmd += ' %s' % email
 	cmds.append(cmd)
 	
-	return sjm.Job('mail_results', cmds, queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs() + control.all_jobs())
+	return sjm.Job('mail_results', cmds, queue=QUEUE, project=PROJECT, host='localhost',sched_options="-m e",dependencies=sample.all_jobs() + control.all_jobs())
 	
 def cleanup(sample, control):
 	cmds = []
@@ -357,7 +357,7 @@ def cleanup(sample, control):
 	if control and control.jobs:
 		if os.path.exists(control.merged_file_location):
 			cmds.append('rm %s' % control.merged_file_location)
-	return sjm.Job('cleanup', cmds, queue=QUEUE, project=PROJECT, dependencies=sample.all_jobs() + control.all_jobs())
+	return sjm.Job('cleanup', cmds, queue=QUEUE, project=PROJECT,sched_options="-m e",dependencies=sample.all_jobs() + control.all_jobs())
 		
 def idr_analysis(name, sample):
 	jobs = []
@@ -366,17 +366,17 @@ def idr_analysis(name, sample):
 			rep_b = sample.replicates[j]
 			idr_name = '%s_VS_%s' % (rep_a.rep_name(sample), rep_b.rep_name(sample))
 			cmd = idr.idr_analysis_cmd(rep_a.narrowPeak, rep_b.narrowPeak, os.path.join(sample.idr_dir, idr_name), 'q.value', sample.genome)
-			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 			
 		# Pseudoreplicates
 		idr_name = '%s_PR1_VS_%s_PR2' % (rep_a.rep_name(sample), rep_a.rep_name(sample))
 		cmd = idr.idr_analysis_cmd(rep_a.narrowPeak_pr1, rep_a.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name+'_PR'), 'q.value', sample.genome)
-		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 		
 	# Pooled Pseudoreplicates
 	idr_name = '%s_PR1_VS_%s_PR2' % (sample.combined_replicate.rep_name(sample), sample.combined_replicate.rep_name(sample))
 	cmd = idr.idr_analysis_cmd(sample.combined_replicate.narrowPeak_pr1, sample.combined_replicate.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name), 'q.value', sample.genome)
-	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE, project=PROJECT))
+	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	
 	sample.add_jobs(name, jobs)
 	
@@ -389,4 +389,4 @@ def idr_filter(name, sample):
 	cmd += ' %s' % os.path.join(os.path.join(sample.results_dir, 'All'), sample.combined_replicate.unfiltered_results)
 	cmd += ' %s' % sample.results_dir
 	cmd += ' 5' # sort column (p.value)
-	sample.add_jobs(name, [sjm.Job('idr_filter_' + sample.run_name, [cmd,], queue=QUEUE, project=PROJECT),])
+	sample.add_jobs(name, [sjm.Job('idr_filter_' + sample.run_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"),])

@@ -71,5 +71,5 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
 		ctr += 1
 		cmds.append(cmd)
 		
-	sample.add_jobs(name, [sjm.Job('x_correlation_' + sample.run_name, cmds, queue=QUEUE, project=PROJECT, memory='8G'),])
+	sample.add_jobs(name, [sjm.Job('x_correlation_' + sample.run_name, cmds, queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"),])
 	

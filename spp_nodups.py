@@ -42,7 +42,7 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample), [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample), [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results = os.path.join(r.results_dir(sample), r.rep_name(sample) + '_VS_' + control.run_name + '_merged.regionPeak.gz')
 		
 		# Pseudoreplicate Runs
@@ -64,7 +64,7 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR1', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR1', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results_pr1 = os.path.join(r.pr1_results_dir, r.rep_name(sample) + '_PR1_VS_' + control.run_name + '_merged.regionPeak.gz')
 		
 		r.merged_ta_pr2 = os.path.join(r.temp_dir(sample), '%s_PR2.tagAlign' % r.rep_name(sample))
@@ -85,6 +85,6 @@ def run_peakcaller(name, control, sample, options=None):
 		if 'filtchr' in options:
 			for filtchr in options['filtchr']:
 				spp_cmd += ' -filtchr=%s' % filtchr # ignore reads from filtchr chr
-		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR2', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G'))
+		jobs.append(sjm.Job('SPP_' + sample.run_name + '_' + r.rep_name(sample) + '_PR2', [convert_cmd, spp_cmd,], queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"))
 		r.spp_results_pr2 = os.path.join(r.pr2_results_dir, r.rep_name(sample) + '_PR2_VS_' + control.run_name + '_merged.regionPeak.gz')
 	sample.add_jobs(name, jobs)

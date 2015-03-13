@@ -125,7 +125,7 @@ def convert_bam(eland_output, bam_input, mismatches):
 	print "converting to sam: %s" % sam_input
 	bam2sam_cmd = SAMTOOLS_BIN + ' view -h %s > %s' % (bam_input, sam_input)
 	print bam2sam_cmd
-	subprocess.call(bam2sam_cmd, shell=True)
+	subprocess.check_call(bam2sam_cmd, shell=True)
 	convert_sam(eland_output, sam_input, mismatches)
 	print "deleting %s" % sam_input
 	os.remove(sam_input)
