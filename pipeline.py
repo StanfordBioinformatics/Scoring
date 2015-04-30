@@ -170,6 +170,7 @@ def getFileAgeMinutes(infile):
 def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
 	rescore_control = 24 * rescore_control #convert from days to hours
 
+	scriptDir = os.path.dirname(__file__)
 	if not emails:
 		emails = []
 	if not log_dir:
@@ -406,7 +407,8 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False,
 	#jobs.append(peakcaller.cleanup(sample, control))
 	
 	if SNAP_RUN and sample_conf:
-		snap_job = sjm.Job("SNAP", "bash /srv/gs1/apps/snap_support/production/current/peakseq_report_parser_wrapper.sh production %s >& %s/peakseq_report_out " % (sample_conf.path,sample_conf.RESULTS_DIR),  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs(), sched_options='-m e -A chipseq_scoring')
+		scriptPath = os.path.join(scriptDir,"snap_support/production/current/peakseq_report_parser_wrapper.sh")
+		snap_job = sjm.Job("SNAP", "bash " + scriptPath + " production %s >& %s/peakseq_report_out " % (sample_conf.path,sample_conf.RESULTS_DIR),  queue=QUEUE, project=PROJECT, host='localhost', dependencies=sample.all_jobs(), sched_options='-m e -A chipseq_scoring')
 		jobs.append(snap_job)
 				
 	if control.jobs:

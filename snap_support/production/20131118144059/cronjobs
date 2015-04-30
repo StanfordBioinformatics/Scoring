@@ -1,0 +1,2 @@
+*/5 * * * * /srv/gs1/apps/snap_support/staging/current/snap_peakseq_caller_wrapper.sh staging  paired_end
+*/5 * * * * /srv/gs1/apps/snap_support/production/current/snap_peakseq_caller_wrapper.sh production  paired_end
