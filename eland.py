@@ -101,37 +101,41 @@ class ElandHitParser:
 	
 	def parse(self, line):
 		fields = line.rstrip('\n').split('\t')
-		if len(fields) > 6:
-			return ElandHit(
-								read_name=fields[0],
-								sequence=fields[1],
-								match_code=fields[2],
-								num_exact=int(fields[3]),
-								num_1_error=int(fields[4]),
-								num_2_error=int(fields[5]),
-								chr_name=fields[6],
-								coordinate=fields[7],
-								strand=fields[8],
-								n_interpretation=fields[9]
-							)
-		elif len(fields) > 3:
-			return ElandHit(
-								read_name=fields[0],
-								sequence=fields[1],
-								match_code=fields[2],
-								num_exact=int(fields[3]),
-								num_1_error=int(fields[4]),
-								num_2_error=int(fields[5]),
-							)
-		else:
-			return ElandHit(
-								read_name=fields[0],
-								sequence=fields[1],
-								match_code=fields[2],
-								num_exact=0,
-								num_1_error=0,
-								num_2_error=0,
-							)
+		try:
+			if len(fields) > 6:
+				return ElandHit(
+									read_name=fields[0],
+									sequence=fields[1],
+									match_code=fields[2],
+									num_exact=int(fields[3]),
+									num_1_error=int(fields[4]),
+									num_2_error=int(fields[5]),
+									chr_name=fields[6],
+									coordinate=fields[7],
+									strand=fields[8],
+									n_interpretation=fields[9]
+								)
+			elif len(fields) > 3:
+				return ElandHit(
+									read_name=fields[0],
+									sequence=fields[1],
+									match_code=fields[2],
+									num_exact=int(fields[3]),
+									num_1_error=int(fields[4]),
+									num_2_error=int(fields[5]),
+								)
+			else:
+				return ElandHit(
+									read_name=fields[0],
+									sequence=fields[1],
+									match_code=fields[2],
+									num_exact=0,
+									num_1_error=0,
+									num_2_error=0,
+								)
+		except ValueError:
+			print(line)
+			raise
 						
 class ElandExtendedParser:
 	
@@ -302,6 +306,9 @@ class BwaSamParser:
 		pass
 		
 	def parse(self, line):
+		"""
+		Note that if the XM (number of mismatches) tag is not present in the BAM file, then num_mismatches will be set to the value of the NM (edit distance) tag.
+		"""
 		if line is None:
 			raise Exception("Cannot parse line of NoneType")
 		fields = line.rstrip('\n').split('\t')
@@ -358,6 +365,13 @@ class BwaSamParser:
 		except KeyError: 
 			num_best_hits=0
 		
+		edit_distance=tags['NM']
+
+		try:
+			num_mismatches=int(tags['XM'])
+		except KeyError:
+			num_mismatches = edit_distance	
+
 		return BwaSamLine(
 							qname=fields[0],
 							strand=strand,
@@ -367,10 +381,10 @@ class BwaSamParser:
 							cigar=fields[5],
 							sequence=fields[9],
 							quality=fields[10],
-							edit_distance=tags['NM'],
+							edit_distance=edit_distance,
 							mismatching_positions=tags['MD'],
 							num_best_hits=num_best_hits,
-							num_mismatches=int(tags['XM']),
+							num_mismatches=num_mismatches,
 							alternative_hits=alt_hits
 						)
 
