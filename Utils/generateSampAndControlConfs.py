@@ -19,7 +19,11 @@ q_value_thresholds = "0.1,0.05,0.01,0.001"
 bin_size = 10000
 peakseq_binary = "/srv/gs1/projects/scg/Scoring/Peak-Seq_v1.02/Peak-Seq_v1.02"
 
-description = """Generates the sample config file and the control config file for each scoring request in the input file, which contains one request per line. For each request, creates the run folder if it doesn't exist already, as well as the run folder subdirectories called 'inputs', 'results', and 'tmp'. The equivalent happens for the control name. There must be at least one sample and one control replicate (BAM file), and they must be in the first sample and first control field, respectively, of the input file. For any BAM files that are given but can't be found, it will be logged in the BAM log file (-b). For scoring requests that are successfully prepared, they will be logged to the ready-to-score file (-s). The format of the input file (-i) is:
+description = """
+OVERVIEW:
+Generates the sample config file and the control config file for each scoring request in the input file, which contains one request per line in the format given below. For each request, creates the run folder if it doesn't exist already, as well as the run folder subdirectories called 'inputs', 'results', and 'tmp'. The equivalent happens for the control name. There must be at least one sample and one control replicate (BAM file), and they must be in the first sample and first control field, respectively, of the input file. For any BAM files that are given but can't be found, it will be logged in the BAM log file (-b). For scoring requests that are successfully prepared, they will be logged to the ready-to-score file (-s). A notification email will be sent to the email addresses specified in the conf file if there are any scoring requests that have a control or replicate BAM file that can't be located on tthe server, and the message contents will be that of the BAM log file. The format of that log file is given in the help description of the -b argument. The contents of that log file will be emailed as the message body.  Lastly, if the --pipeline argument is specified, then this script will kick of the batch scoring process. If there is a failure in that script, the details of the failure will be emailed to the same email addresses as mentioned above.
+
+INPUT FILE FORMAT (-i/--infile):
 
 	0) Scoring run name
 	1) scoring status   #no longer used
@@ -36,6 +40,7 @@ parser.add_argument('-i','--infile',required=True,help="The input file with para
 parser.add_argument('--header',action="store_true",help="Presence of this option indicates that there is a single field-header line as the first line in --infile.")
 parser.add_argument('-b',required=True,help="The output file for runs that need bam files. Opened in append mode. If the file pre-exists, it will be overwritten. For any BAM file that isn't found, a line will be logged in this file with the tab-delimited fields 'runName, rundir,lane,fileName'.")
 parser.add_argument('-s',required=True,help="The output file to send runs ready for scoring. Opened in append mode. If the file pre-exists, it will be overwritten. Formatted the same as --infile. For each scoring request in --infile that is valid (has BAM files that can be found), that scoring request (line) is copied to this file.")
+parser.add_argument('--pipeline',action="store_true", help="Presence of this option indicates to start the batch scoring by calling the script batchScore.py")
 parser.add_argument('-v','--verbose',action="store_true",help="Turn on verbosity")
 
 def logMissingBam(scoringName,runName,lane,bamfilename):
@@ -59,6 +64,7 @@ def getBamFilePath(scoringName,rundir,bamfilename):
 
 args = parser.parse_args()
 verbose = args.verbose
+batchScore = args.pipeline
 dico = {}
 if os.path.exists(args.b):
 	os.remove(args.b)
@@ -177,11 +183,25 @@ for line in fh:
 sout.close()
 
 bout.seek(0,2) #go to end of file
+
 if bout.tell():
 	bout.close()
 	#send email to notify about scoring runs that can't proceed due to missing BAMs.
-	cmd = "python mandril_general.py --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(body=bout.name,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
+	subject = "ChIP Scoring Warning: BAMS not found"
+	cmd = "python mandril_general.py --subject {subject}  --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(subject=subject,body=bout.name,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
 	gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
 bout.close()
 
-
+if batchScore:
+	cmd = "python batchScore.py -i {infile} -p".format(infile=sout.name)
+	try:
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True) #an Exception will have been raised with details on cmd, stdout,stderr, and returncode if the command failed.
+	except Exception as e:
+		subject = "ChIP Scoring Failure: batchScore.py failed"
+		cmd = "python mandril_general.py --subject {subject} --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(subject=subject,body=e.message,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
+		gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		
+	
+	
+	
+	
