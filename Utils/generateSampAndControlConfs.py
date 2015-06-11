@@ -3,6 +3,8 @@ import argparse
 import re
 import os
 from SequencingRuns import runPaths
+import gbsc_utils
+import conf
 
 def getRunDirPath(runName):
 	try:
@@ -10,10 +12,6 @@ def getRunDirPath(runName):
 	except OSError:
 		path = runPaths.getArchivePath(runName)
 	return path
-
-
-controlPrefixPath = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human"
-sampPrefixPath =    "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human"
 
 genome = "hg19_male"
 mappability_file = "/srv/gs1/apps/snap_support/production/current/hg19_male.txt"
@@ -34,16 +32,39 @@ description = """Generates the sample config file and the control config file fo
 	"""
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,description=description)
-parser.add_argument('-i','--infile',required=True,help="The input file with parameter settings. The run name is in the first field")
+parser.add_argument('-i','--infile',required=True,help="The input file with parameter settings. The file must be formatted as indicated in the program description above.")
 parser.add_argument('--header',action="store_true",help="Presence of this option indicates that there is a single field-header line as the first line in --infile.")
-parser.add_argument('-b',required=True,help="The output file for runs that need bam files. Opened in append mode.")
-parser.add_argument('-s',required=True,help="The output file to send runs ready for scoring. Opened in append mode.")
+parser.add_argument('-b',required=True,help="The output file for runs that need bam files. Opened in append mode. If the file pre-exists, it will be overwritten. For any BAM file that isn't found, a line will be logged in this file with the tab-delimited fields 'runName, rundir,lane,fileName'.")
+parser.add_argument('-s',required=True,help="The output file to send runs ready for scoring. Opened in append mode. If the file pre-exists, it will be overwritten. Formatted the same as --infile. For each scoring request in --infile that is valid (has BAM files that can be found), that scoring request (line) is copied to this file.")
 parser.add_argument('-v','--verbose',action="store_true",help="Turn on verbosity")
+
+def logMissingBam(scoringName,runName,lane,bamfilename):
+	"""
+	Function : Checks if the given BAM file name exists in it's run or run and lane directory. If so, returns the path, otherwise logs the missing BAM file.
+	Args     : scoringName - str. Name of the scoring run, parsed from the first field of a line in --infile.
+						 runName     - str. Name of the sequecing run.
+						 lane        - str. The sequencing lane on the sequencing run (i.e. L1).
+						 bamfilename - str. The name of the BAM file.
+	"""
+	global bout
+	bout.write(scoringName + "\t" + runName + "\t" + lane + "\t" + bamfilename + "\n")
+
+def getBamFilePath(scoringName,rundir,bamfilename):
+	path = runPaths.getBamFile(rundir=runDir,fileName=fileName)
+	if not path:
+		lane = runPaths.getLaneReg.search(fileName).groups()[0]
+		logMissingBam(scoringName=scoringName,runName=os.path.basename(rundir),lane=lane,bamfilename=fileName)
+		return None	
+	return path
 
 args = parser.parse_args()
 verbose = args.verbose
 dico = {}
+if os.path.exists(args.b):
+	os.remove(args.b)
 bout = open(args.b,'a')
+if os.path.exists(args.s):
+	os.remove(args.s)
 sout = open(args.s,'a')
 fh = open(args.infile,'r')
 if args.header:
@@ -56,10 +77,10 @@ for line in fh:
 	line = [x.strip() for x in line]
 	if verbose:
 		print(line)
-	runName = line[0]
-	runPath = os.path.join(sampPrefixPath,runName)
+	scoringRunName = line[0]
+	runPath = os.path.join(conf.sampleScoringPrefixPath,scoringRunName)
 	print()
-	print("Processing run {}".format(runName))
+	print("Processing run {}".format(scoringRunName))
 	print("runPath is {}".format(runPath))
 	if not os.path.exists(runPath):
 		os.mkdir(runPath)
@@ -75,18 +96,18 @@ for line in fh:
 	sampRep1 = line[3]
 	sampRep1_runName = runPaths.getRunNameFlf(sampRep1)
 	rundir = getRunDirPath(sampRep1_runName)
-	sampRep1 = runPaths.getBamFile(rundir,sampRep1,bout)
+	sampRep1 = runPaths.getBamFilePath(scoringRunName,rundir,sampRep1)
 	if not sampRep1:
 		continue #bam doesn't exist (logged to bout)
 	sampRep2 = line[4]
 	if sampRep2:
 		sampRep2_runName = runPaths.getRunNameFlf(sampRep2)
 		rundir = getRunDirPath(sampRep2_runName)
-		sampRep2 = runPaths.getBamFile(rundir,sampRep2,bout)
+		sampRep2 = runPaths.getBamFile(scoringRunName,rundir,sampRep2)
 		if not sampRep2:
 			continue #bam doesn't exist (logged to bout)
 	controlName = line[5]
-	controlDir = os.path.join(controlPrefixPath,controlName)
+	controlDir = os.path.join(conf.controlScoringPrefixPath,controlName)
 	print("controlPath is {}".format(controlDir))
 	if not os.path.exists(controlDir):
 		os.mkdir(controlDir)
@@ -102,7 +123,7 @@ for line in fh:
 	controlRep1 = line[6]
 	controlRep1_runName = runPaths.getRunNameFlf(controlRep1)
 	rundir = getRunDirPath(controlRep1_runName)
-	controlRep1 = runPaths.getBamFile(rundir,controlRep1,bout)
+	controlRep1 = runPaths.getBamFile(scoringRunName,rundir,controlRep1)
 	if not controlRep1:
 		continue #bam doesn't exist (logged to bout)
 	controls = controlRep1
@@ -114,7 +135,7 @@ for line in fh:
 	if controlRep2:
 		controlRep2_runName = runPaths.getRunNameFlf(controlRep2)
 		rundir = getRunDirPath(controlRep2_runName)
-		controlRep2 = runPaths.getBamFile(rundir,controlRep2,bout)
+		controlRep2 = runPaths.getBamFile(scoringRunName,rundir,controlRep2)
 
 		if not controlRep2:
 			continue #bam doesn't exist (logged to bout)
@@ -154,4 +175,13 @@ for line in fh:
 	print("Created control conf file {}".format(controlConfFile))
 	sout.write("\t".join(line) + "\n")
 sout.close()
+
+bout.seek(0,2) #go to end of file
+if bout.tell():
+	bout.close()
+	#send email to notify about scoring runs that can't proceed due to missing BAMs.
+	cmd = "python mandril_general.py --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(body=bout.name,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
+	gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
 bout.close()
+
+
