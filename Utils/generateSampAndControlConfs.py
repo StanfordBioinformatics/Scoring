@@ -21,8 +21,19 @@ q_value_thresholds = "0.1,0.05,0.01,0.001"
 bin_size = 10000
 peakseq_binary = "/srv/gs1/projects/scg/Scoring/Peak-Seq_v1.02/Peak-Seq_v1.02"
 
-description = "Generates the sample config file and the control config file for each scoring request in the input file, which contains once request per line. For each request, creates the run folder if it doesn't exist already, as well as the run folder subdirectories called 'inputs', 'results', and 'tmp'. The equivalent happens for the control name. There must be at least one sample and one control replicate (BAM file), and they must be in the first sample and first control field, respectively, of the input file. For any BAM files that are given but can't be found, it will be logged in the BAM log file (-b). For scoring requests that are successfully prepared, they will be logged to the ready-to-score file (-s)."
-parser = argparse.ArgumentParser(description=description)
+description = """Generates the sample config file and the control config file for each scoring request in the input file, which contains one request per line. For each request, creates the run folder if it doesn't exist already, as well as the run folder subdirectories called 'inputs', 'results', and 'tmp'. The equivalent happens for the control name. There must be at least one sample and one control replicate (BAM file), and they must be in the first sample and first control field, respectively, of the input file. For any BAM files that are given but can't be found, it will be logged in the BAM log file (-b). For scoring requests that are successfully prepared, they will be logged to the ready-to-score file (-s). The format of the input file (-i) is:
+
+	0) Scoring run name
+	1) scoring status   #no longer used
+	2) Whether or not samples are paired-end #no longer used
+	3) BAM file name for sample replicate 1
+	4) BAM file name for sample replicate 2
+	5) control name
+	6) BAM file name for control replicate 1
+	7) BAM file name for control replicate 2
+	"""
+
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,description=description)
 parser.add_argument('-i','--infile',required=True,help="The input file with parameter settings. The run name is in the first field")
 parser.add_argument('--header',action="store_true",help="Presence of this option indicates that there is a single field-header line as the first line in --infile.")
 parser.add_argument('-b',required=True,help="The output file for runs that need bam files. Opened in append mode.")

@@ -7,7 +7,7 @@ import datetime
 #sampleRunPrefix = "/srv/gs1/projects/scg/SNAP_Scoring/production/replicates/human" #old path on gs1
 sampleRunPrefix = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human" #new path on gsfs0
 controlRunPrefix = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human"
-description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb"
+description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb. The script generateSampAndControlConfs.py needs to have been first called because it's responsible for creating the sample and control configuration files that the pipeline uses."
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-i','--infile',required=True,help="Batch input file.")
 parser.add_argument('-r','--run-field-pos',default=0,help="Run name field position (0-base).")
