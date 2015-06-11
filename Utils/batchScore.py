@@ -3,10 +3,9 @@ import subprocess
 import shutil
 import os
 import datetime
+import conf
 
 #sampleRunPrefix = "/srv/gs1/projects/scg/SNAP_Scoring/production/replicates/human" #old path on gs1
-sampleRunPrefix = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human" #new path on gsfs0
-controlRunPrefix = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human"
 description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb. The script generateSampAndControlConfs.py needs to have been first called because it's responsible for creating the sample and control configuration files that the pipeline uses."
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-i','--infile',required=True,help="Batch input file.")
@@ -33,11 +32,11 @@ for line in fh:
 	run = line[args.run_field_pos].strip()
 	#print("#{run}#".format(run=run))
 	control = line[args.control_field_pos].strip()
-	sampleRunPath = os.path.join(sampleRunPrefix,run)
+	sampleRunPath = os.path.join(conf.sampleScoringPrefixPath,run)
 	sampleResultsPath = os.path.join(sampleRunPath,"results")
 	sampleInputsPath = os.path.join(sampleRunPath,"inputs")
 	sampleConf = os.path.join(sampleInputsPath,"sample.conf")
-	controlRunPath = os.path.join(controlRunPrefix,control)
+	controlRunPath = os.path.join(controlScoringPrefixPath,control)
 	controlResultsPath = os.path.join(controlRunPath,"results")
 	controlInputsPath = os.path.join(controlRunPath,"inputs")
 	controlConf = os.path.join(controlInputsPath,"control.conf")
