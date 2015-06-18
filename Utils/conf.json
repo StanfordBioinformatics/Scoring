@@ -2,7 +2,7 @@
 	"scoringPathPrefix": {
 			"control" : "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human",
 			"sample"    : "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human"
-	}
+	},
 
 	"email": {
 		"sender": "nathankw",

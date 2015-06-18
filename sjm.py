@@ -97,7 +97,7 @@ class Submission:
 		return job_description_file
 
 	def run(self, job_description_file,foreground=False):
-		"""Run sjm jobs. Wait for sjm to complete."""
+		"""Run sjm jobs. Wait for sjm to complete if 'foreground' argument is set to True."""
 		job_description_file = self.build(job_description_file)
 		
 		cmd = SJM_COMMAND

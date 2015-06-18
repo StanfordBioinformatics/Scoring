@@ -2,6 +2,13 @@
 #
 require 'optparse'
 require 'ostruct'
+require 'json'
+
+confFh = File.open("conf.json","r")
+conf = JSON.load(confFh)
+sampleRunPath = conf["scoringPathPrefix"]["sample"]
+notifyEmail = conf["email"]["to"][0]
+
 #require 'snap_peakseq_caller'
 
 options = OpenStruct.new
@@ -98,47 +105,54 @@ stdout = "#{sampInputsDir}/pipeline.py_stdout.txt"
 stderr = "#{sampInputsDir}/pipeline.py_stderr.txt"
 snapLog = "#{sampInputsDir}/snap_log.txt"
 
-cmd = "python /srv/gs1/projects/scg/Scoring/pipeline2/pipeline.py -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n #{runName} -l #{sampInputsDir}"
+pythonCmd = "python /srv/gs1/projects/scg/Scoring/pipeline2/pipeline.py -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n #{runName} -l #{sampInputsDir}"
 #if snap
-#	cmd += " --snap"
+#	pythonCmd += " --snap"
 #end 
 
 #if options.no_control_lock
-#	cmd += " --no-control-lock"
+#	pythonCmd += " --no-control-lock"
 #end 
 
 if options.rescore_control > 0
-	cmd += " --rescore_control=#{options.rescore_control}"
+	pythonCmd += " --rescore_control=#{options.rescore_control}"
 end 
 
 if options.paired_end
-	cmd += " --paired_end"
+	pythonCmd += " --paired_end"
 end 
 
 #if options.genome
-cmd += " --genome hg19_male"
+pythonCmd += " --genome hg19_male"
 #end 
 
 if options.force:
-	cmd += " --force"
+	pythonCmd += " --force"
 end 
 
-cmd += " #{controlConf} #{sampConf}"
-cmd += " 2> #{stderr}"
-putToLog = "echo #{cmd} >> #{snapLog}"
+pythonCmd += " #{controlConf} #{sampConf}"
+pythonCmd += " 2> #{stderr}"
+putToLog = "echo #{pythonCmd} >> #{snapLog}"
 system(putToLog)
-if $?.to_i > 0
-	puts "Error running '#{cmd}' - failed with exit code #{$?}"
-end
 
 t = Time.new #current time
 timeVal = t.year.to_s + "-" + t.month.to_s + "-" + t.day.to_s 
-res = system(cmd) 
+#set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
+qsubCmd = "qsub -sync y -wd #{sampleRunPath} -m ae -M #{notifyEmail} #{pythonCmd}"
+putToLog = "echo #{qsubCmd} >> #{snapLog}"
+system(putToLog)
+
+#system() runs a command in a subshell. Returns true if the command gives zero exit status, false for non zero exit status. 
+# Returns nil if command execution fails. An error status is available in $?. The arguments are processed in the same way as for Kernel.spawn.
+
+#update Syapse's Chip Seq Scoring object's Scoring Status attribute to 'Running Analysis'
+res = system(qsubCmd)
 puts $?.to_i
-if not res or $?.to_i > 0
-	puts "Error running '#{cmd}'. Tried to run command in runPeakseqWithoutSnapUpdates.rb."
+if not res or $?.to_i  > 0 #if res is nil, nil.to_i = 0
+	puts "Error running '#{qsubCmd}'. Tried to run command in runPeakseqWithoutSnapUpdates.rb."
 	exit(1)
 end
+
 #t2 = Time.new
 #tw = t.year.to_s + "-" + t.month.to_s + "-" + t.day.to_s
 #system("echo 'Start Time: #{t}' >> #{snapLog}")

@@ -1,11 +1,11 @@
 import json
 
 conffh = open("conf.json",'r')
-conf = json.loads(conffh)
+conf = json.load(conffh)
 
-controlScoringPrefixPath = conf.scoringPathPrefix["control"]
-sampleScoringPrefixPath  = conf.scoringPathPrefix["sample"]
+controlScoringPrefixPath = conf['scoringPathPrefix']['control']
+sampleScoringPrefixPath  = conf['scoringPathPrefix']['sample']
 
-toEmails = email.to #list
-ccEmails = email.cc #list
-sender   = emails.sender #string
+toEmails = conf['email']['to'] #list
+ccEmails = conf['email']['cc'] #list
+sender   = conf['email']['sender'] #string

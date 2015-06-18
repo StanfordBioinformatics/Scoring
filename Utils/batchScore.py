@@ -74,7 +74,8 @@ for line in fh:
 #			if dte > refTime:
 #				print("Continuing")
 #				continue  #assume that scoring is still ongoing
-	cmd = "qsub -sync y -wd {wd} -m ae -M nathankw@stanford.edu -V runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(wd=sampleRunPath,run=run,control=control)
+#	cmd = "qsub -sync y -wd {wd} -m ae -M {notify}  -V runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
+	cmd = "runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
 	if args.paired_end:
 		cmd += " --paired-end"
 	if args.rescore_control > 0:

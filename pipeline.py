@@ -436,7 +436,7 @@ if __name__ == '__main__':
 	parser.add_option("-p","--print",action="store_true",dest="print_cmds",help="prints the job commands, but does not dispatch them to the cluster")
 	parser.add_option("-l","--log",dest="log_dir",default=None,help="log directory, current working directory if not specified")
 	parser.add_option("-n","--name",dest="run_name",default="Pipeline",help="name for the pipeline run")
-	parser.add_option("-m","--mail",action="append",dest="emails",help="email address to send summary and result location")
+	parser.add_option("-m","--mail",action="append",dest="emails",help="email address to send summary and result location.")
 	parser.add_option("-g","--genome")
 	parser.add_option("-c","--peakcaller",default="macs2",help="specify the peakcaller to be used.  Current options are peakseq, macs,macs2, spp. Defaults to macs2.")
 	parser.add_option("--snap",action="store_true",help="make a call to the SNAP LIMS after completion")
