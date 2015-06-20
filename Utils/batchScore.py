@@ -4,10 +4,13 @@ import shutil
 import os
 import datetime
 import conf
+import SyapseUtils #module load gbsc/encode
+import gbsc_utils  #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
 
 #sampleRunPrefix = "/srv/gs1/projects/scg/SNAP_Scoring/production/replicates/human" #old path on gs1
 description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb. The script generateSampAndControlConfs.py needs to have been first called because it's responsible for creating the sample and control configuration files that the pipeline uses."
 parser = argparse.ArgumentParser(description=description)
+parser.add_argument('--syapse-mode',required=True,help="A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=SyapseUtils.Syapse.knownModes))
 parser.add_argument('-i','--infile',required=True,help="Batch input file.")
 parser.add_argument('-r','--run-field-pos',default=0,help="Run name field position (0-base).")
 parser.add_argument('-c','--control-field-pos',default=5,help="Control name field position (0-base).")
@@ -18,6 +21,7 @@ parser.add_argument('--purge-inputs-dirs',action="store_true",help="Presence of 
 parser.add_argument('--rescore-control',type=int,default=0,help="The number of days old the control scoring should be in order for it to be rescored. This option is mainly used to rescore a control that is a paired-end (PE) and that was scored using all reads instead of just the forward reads.  So, this option would be helpful to use if the control is paired-end (PE). Up until May 2014, all scoring was done with both forward and reverse reads, so in order to rescore a control with just the forward reads, you'd wan't to incude the --paired-end option and set --rescore_control to the number of since since May 1, 2014.")
 #parser.add_argument('--sample-time',action="store_true")
 args = parser.parse_args()
+syapseMode = args.syapse_mode
 
 limit = args.limit
 count = 0
@@ -75,13 +79,14 @@ for line in fh:
 #				print("Continuing")
 #				continue  #assume that scoring is still ongoing
 #	cmd = "qsub -sync y -wd {wd} -m ae -M {notify}  -V runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
-	cmd = "runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
+	cmd = "runPeakseqWithoutSnapUpdates.py --syapse-mode {syapsMode} --name {run} --control {control} --force".format(syapseMode=syapseMode,notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
 	if args.paired_end:
 		cmd += " --paired-end"
 	if args.rescore_control > 0:
 		cmd += " --rescore-control={}".format(args.rescore_control)
 	print(cmd)
-	subprocess.Popen(cmd,shell=True)
+	#let progam continue if runPeakseqWithoutSnapUpdates.py failes, since an email will already be sent in that case, to the 'sender' specified in conf.py.
+	popen = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
 	if limit:
 		count += 1
 		if count >= limit:
