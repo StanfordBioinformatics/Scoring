@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import json
+import os
+import sys
 from argparse import ArgumentParser
 import gbsc_utils #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
 import SyapseUtils #module load gbsc/encode
+import conf
 
 description = ""
 parser = ArgumentParser(description=description)
@@ -25,18 +27,14 @@ singleEnd = args.single_end #bool
 genome = args.genome
 force = args.force #bool
 
-confFh = open("conf.json","r")
-conf = json.load(confFh)
-sampleRunPathPrefix = conf["scoringPathPrefix"]["sample"]
-controlRunPathPrefix = conf["scoringPathPrefix"]["control"]
-notifyEmail = conf["email"]["to"][0]
+notifyEmail = conf.toEmails
 
-sampDir = os.path.join(sampleRunPathPrefix,runName)
+sampDir = os.path.join(conf.sampleScoringPrefixPath,runName)
 sampInputsDir = os.path.join(sampDir,"inputs")
-controlDir = os.path.join(controlRunPathPrefix,control)
+controlDir = os.path.join(conf.controlScoringPrefixPath,control)
 controlInputsDir = os.path.join(controlDir,"inputs")
 sampConf = os.path.join(sampInputsDir,"sample.conf")
-controlConf = os.path.join(controlInputsDir,"ontrol.conf")
+controlConf = os.path.join(controlInputsDir,"control.conf")
 
 stdout = os.path.join(sampInputsDir,"pipeline.py_stdout.txt")
 if os.path.exists(stdout):
@@ -49,7 +47,7 @@ if os.path.exists(snapLog):
 	os.remove(snapLog)
 logfh = open(snapLog,'w')
 
-pythonCmd = "python {scoringPipelineScript} -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(scoringPipelineScript=conf.scoringPipelineScript,runName=runName,sampInputsDir=sampInputsDir)
+pythonCmd = "{scoringPipelineScriptPath} -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(scoringPipelineScriptPath=conf.scoringPipelineScriptPath,runName=runName,sampInputsDir=sampInputsDir)
 
 if rescoreControl > 0:
 	pythonCmd += " --rescore_control={rescore_control}".format(rescoreControl=rescoreControl)
@@ -66,17 +64,20 @@ pythonCmd += " {controlConf} {sampConf}".format(controlConf=controlConf,sampConf
 pythonCmd += " 2> {stderr}".format(stderr=stderr)
 logfh.write(pythonCmd + "\n")
 
-qsubCmd = "qsub -sync y -wd {sampDir} -m ae -M {notifyEmail} #{pythonCmd}".format(sampDir=sampDir,notifyEmail=notifyEmail)
+qsubCmd = "qsub -V -sync y -wd {sampDir} -m ae -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
 logfh.write(qsubCmd)
 try:
 	stdout,stderr = gbsc_utils.createSubprocess(cmd=qsubCmd,checkRetcode=True)
 except Exception as e:
 	subject = "Chip Scoring: Error running {program}".format(program=sys.argv[0])
-	body = e.message
-	emailCmd = "mandrill_general.py --subject {subject} --to {notifyEmail} --body {body} ".format(subject=subject,notifyEmail=notifyEmail,body=body)
+	body = e.message + "\n\nCheck the SGE log files in " + sampDir + " for more details."
+	emailCmd = "mandrill_general_email.py  --sender {sender} --subject \"{subject}\" --to {notifyEmail} --add \"{body}\" ".format(sender=conf.sender,subject=subject,notifyEmail=" ".join(notifyEmail),body=body)
+	print(emailCmd)
 	gbsc_utils.createSubprocess(cmd=emailCmd,checkRetcode=True)
 #set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
-syapse = SyapseUtils(mode=args.syapse_mode)
+#syapse = SyapseUtils.Utils(mode=args.syapse_mode)
+#syapseConn = syapse.connect()
+#syapseConn.getPropertyEnumRange(
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to 'Running Analysis'

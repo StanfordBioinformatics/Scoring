@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import subprocess
 import shutil
@@ -40,7 +42,7 @@ for line in fh:
 	sampleResultsPath = os.path.join(sampleRunPath,"results")
 	sampleInputsPath = os.path.join(sampleRunPath,"inputs")
 	sampleConf = os.path.join(sampleInputsPath,"sample.conf")
-	controlRunPath = os.path.join(controlScoringPrefixPath,control)
+	controlRunPath = os.path.join(conf.controlScoringPrefixPath,control)
 	controlResultsPath = os.path.join(controlRunPath,"results")
 	controlInputsPath = os.path.join(controlRunPath,"inputs")
 	controlConf = os.path.join(controlInputsPath,"control.conf")
@@ -79,14 +81,17 @@ for line in fh:
 #				print("Continuing")
 #				continue  #assume that scoring is still ongoing
 #	cmd = "qsub -sync y -wd {wd} -m ae -M {notify}  -V runPeakseqWithoutSnapUpdates.rb --name {run} --control {control} --force".format(notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
-	cmd = "runPeakseqWithoutSnapUpdates.py --syapse-mode {syapsMode} --name {run} --control {control} --force".format(syapseMode=syapseMode,notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
+	cmd = "runPeakseqWithoutSnapUpdates.py --syapse-mode {syapseMode} --name {run} --control {control} --force".format(syapseMode=syapseMode,notify=conf.toEmails[0],wd=sampleRunPath,run=run,control=control)
 	if args.paired_end:
-		cmd += " --paired-end"
+		pass #runPeakseqWithoutSnapUpdates.py expects PE by default
 	if args.rescore_control > 0:
 		cmd += " --rescore-control={}".format(args.rescore_control)
 	print(cmd)
 	#let progam continue if runPeakseqWithoutSnapUpdates.py failes, since an email will already be sent in that case, to the 'sender' specified in conf.py.
-	popen = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
+	try:
+		popen = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
+	except Exception as e:
+		print(e.message)
 	if limit:
 		count += 1
 		if count >= limit:

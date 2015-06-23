@@ -1,5 +1,4 @@
-#!/bin/env python
-
+#!/srv/gs1/software/python/python-2.7/bin/python
 import subprocess
 import datetime
 import time

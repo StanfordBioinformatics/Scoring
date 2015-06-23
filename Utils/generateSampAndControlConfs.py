@@ -6,13 +6,6 @@ from SequencingRuns import runPaths
 import gbsc_utils
 import conf
 
-def getRunDirPath(runName):
-	try:
-		path = runPaths.getPubPath(runName)
-	except OSError:
-		path = runPaths.getArchivePath(runName)
-	return path
-
 genome = "hg19_male"
 mappability_file = "/srv/gs1/apps/snap_support/production/current/hg19_male.txt"
 q_value_thresholds = "0.1,0.05,0.01,0.001"
@@ -55,7 +48,13 @@ def logMissingBam(scoringName,runName,lane,bamfilename):
 	bout.write(scoringName + "\t" + runName + "\t" + lane + "\t" + bamfilename + "\n")
 
 def getBamFilePath(scoringName,rundir,bamfilename):
-	path = runPaths.getBamFile(rundir=runDir,fileName=fileName)
+	"""
+	Function : A wrapper for runPaths.getBamFile so that it logs any unfound BAM file.
+	Args     : scoringName - the name of the scoring run
+						 rundir      - the run directory path to the published results.
+						 bamfilename - the name of the BAM file to find in the published results.
+	"""
+	path = runPaths.getBamFilePath(rundir=rundir,fileName=bamfilename)
 	if not path:
 		lane = runPaths.getLaneReg.search(fileName).groups()[0]
 		logMissingBam(scoringName=scoringName,runName=os.path.basename(rundir),lane=lane,bamfilename=fileName)
@@ -101,15 +100,15 @@ for line in fh:
 		os.mkdir(sampTempDir)
 	sampRep1 = line[3]
 	sampRep1_runName = runPaths.getRunNameFlf(sampRep1)
-	rundir = getRunDirPath(sampRep1_runName)
-	sampRep1 = runPaths.getBamFilePath(scoringRunName,rundir,sampRep1)
+	rundir = runPaths.getPubPath(sampRep1_runName)
+	sampRep1 = getBamFilePath(scoringRunName,rundir,sampRep1)
 	if not sampRep1:
 		continue #bam doesn't exist (logged to bout)
 	sampRep2 = line[4]
 	if sampRep2:
 		sampRep2_runName = runPaths.getRunNameFlf(sampRep2)
-		rundir = getRunDirPath(sampRep2_runName)
-		sampRep2 = runPaths.getBamFile(scoringRunName,rundir,sampRep2)
+		rundir = runPaths.getPubPath(sampRep2_runName)
+		sampRep2 = getBamFilePath(scoringRunName,rundir,sampRep2)
 		if not sampRep2:
 			continue #bam doesn't exist (logged to bout)
 	controlName = line[5]
@@ -128,8 +127,8 @@ for line in fh:
 		os.mkdir(controlTempDir)
 	controlRep1 = line[6]
 	controlRep1_runName = runPaths.getRunNameFlf(controlRep1)
-	rundir = getRunDirPath(controlRep1_runName)
-	controlRep1 = runPaths.getBamFile(scoringRunName,rundir,controlRep1)
+	rundir = runPaths.getPubPath(controlRep1_runName)
+	controlRep1 = getBamFilePath(scoringRunName,rundir,controlRep1)
 	if not controlRep1:
 		continue #bam doesn't exist (logged to bout)
 	controls = controlRep1
@@ -140,8 +139,8 @@ for line in fh:
 		pass
 	if controlRep2:
 		controlRep2_runName = runPaths.getRunNameFlf(controlRep2)
-		rundir = getRunDirPath(controlRep2_runName)
-		controlRep2 = runPaths.getBamFile(scoringRunName,rundir,controlRep2)
+		rundir = runPaths.getPubPath(controlRep2_runName)
+		controlRep2 = getBamFilePath(scoringRunName,rundir,controlRep2)
 
 		if not controlRep2:
 			continue #bam doesn't exist (logged to bout)
@@ -151,7 +150,7 @@ for line in fh:
 	sfout = open(sampleConfFile,'w')
 
 	sfout.write("[general]\n")
-	sfout.write("run_name = {}\n".format(runName))
+	sfout.write("run_name = {}\n".format(scoringRunName))
 	sfout.write("control_results_dir = {}\n".format(controlResultsDir))
 	sfout.write("results_dir = {}\n".format(sampResultsDir))
 	sfout.write("genome = {}\n".format(genome))
