@@ -76,7 +76,7 @@ except Exception as e:
 	gbsc_utils.createSubprocess(cmd=emailCmd,checkRetcode=True)
 #set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
 syapseConn = SyapseUtils.Utils(mode=args.syapse_mode)
-syapseConn.setProperty(propertyName="scoringStatus",value="Running Analysis") #returns a syapse_client.err.PropertyValueError if value not in property range. returns a syapse_client.err.SemanticConstraintError if the property doesn't belong to the class.
+syapseConn.setProperty(unique_id=runName,propertyName="scoringStatus",value="Running Analysis") #returns a syapse_client.err.PropertyValueError if value not in property range. returns a syapse_client.err.SemanticConstraintError if the property doesn't belong to the class.
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to 'Running Analysis'
