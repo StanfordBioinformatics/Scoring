@@ -74,15 +74,15 @@ class Job:
 	
 		
 class Submission:
-	def __init__(self, jobs, log_directory=None, notify=None):
+	def __init__(self, jobs, log_directory=None, notify=[]):
+		"""
+		Args : notify - list of one more more email addresses.
+		"""
 		self.jobs = jobs
 		self.log_directory = log_directory
 		if not notify:
-			self.notify = []
-		elif not type(notify) == list:
-			self.notify = [notify,]
-		else:
-			self.notify = notify
+			raise Exception("the 'notify' argument is required when instantiating sjm.Submission!")
+		self.notify = notify
 		
 	def build(self, job_description_file):
 		if not type(job_description_file) is file:

@@ -64,7 +64,7 @@ pythonCmd += " {controlConf} {sampConf}".format(controlConf=controlConf,sampConf
 pythonCmd += " 2> {stderr}".format(stderr=stderr)
 logfh.write(pythonCmd + "\n")
 
-qsubCmd = "qsub -V -sync y -wd {sampDir} -m ae -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
+qsubCmd = "qsub -V -sync y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
 logfh.write(qsubCmd)
 try:
 	stdout,stderr = gbsc_utils.createSubprocess(cmd=qsubCmd,checkRetcode=True)
