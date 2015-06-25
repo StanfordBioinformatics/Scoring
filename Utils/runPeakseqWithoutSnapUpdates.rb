@@ -138,7 +138,7 @@ system(putToLog)
 t = Time.new #current time
 timeVal = t.year.to_s + "-" + t.month.to_s + "-" + t.day.to_s 
 #set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
-qsubCmd = "qsub -sync y -wd #{sampleRunPath} -m ae -M #{notifyEmail} #{pythonCmd}"
+qsubCmd = "qsub -sync y -wd #{sampleRunPath} -m a -M #{notifyEmail} #{pythonCmd}"
 putToLog = "echo #{qsubCmd} >> #{snapLog}"
 system(putToLog)
 
