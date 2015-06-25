@@ -166,7 +166,7 @@ def getFileAgeMinutes(infile):
 	return minutes
 	
 	
-def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
+def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
 	rescore_control = 24 * rescore_control #convert from days to hours
 
 	scriptDir = os.path.dirname(__file__)
@@ -414,6 +414,13 @@ def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False,
 		peakcaller.prep_control(control)
 	if sample.jobs:
 		peakcaller.prep_sample(sample)
+
+	
+	scoringStatusCmd="setScoringStatusProp.py --syapse-mode {syapseMode} -p scoringStatus --value Scored --unique-id {runName}".format(syapseMode=syapseMode,runName=runName))
+	scoringStatusJobName = run_name + "_setScoringStatusFlagToComplete"
+	job = sjm.Job(name=scoringStatusJobName,commands=scoringStatusCmd,modules=["gbsc/encode/prod"],dependencies=["mail_results"])
+	jobs.append(job)
+
 	submission = sjm.Submission(jobs, log_directory=log_dir, notify=SJM_NOTIFY)
 	if print_cmds:
 		submission.build(run_name + '.jobs') 
@@ -429,6 +436,7 @@ if __name__ == '__main__':
 	from optparse import OptionParser
 	description = "Runs PeakSeq scoring pipeline for ChipSeq data. There are two positional arguments: 1) (Mandatory) The path to the control conf file, and 2) (Optional, but mostly used) The path to the sample conf file."
 	parser = OptionParser(description=description)
+	parser.add_argument('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=SyapseUtils.Syapse.knownModes))
 	parser.add_option("-f","--force",action="store_true",help="forces running of pipeline, even if results already exist")
 	parser.add_option("-d","--no_duplicates",action="store_true",help="runs cross correlation analysis assuming duplicated reads have already been filtered out of the mapped reads.  Uncommon, so defaults to false.")
 	parser.add_option("-a","--no_archive",action="store_false",dest="archive_results",help="do not archive the control and sample results.")
@@ -446,7 +454,10 @@ if __name__ == '__main__':
 	parser.add_option("--filtchr",help="SPP option to ignore a chromosome during analysis.  Used to fix bug that chrs with low read counts causes SPP to fail")
 
 	options,arguments = parser.parse_args()
-	
+	syapseMode = options.mode
+	if not syapseMode:
+		parser.error("You must supply the --mode argument!")	
+
 	peakcaller_options = {}
 	xcorrelation_options = {}
 	filtchr = options.filtchr
@@ -486,4 +497,4 @@ if __name__ == '__main__':
 	else:
 		parser.error("Invalid Peakcaller selected.  Options are 'peakseq', 'macs', 'macs2',  'spp' or 'spp_nodups'")
 
-	main(peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
+	main(syapseMode=syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)

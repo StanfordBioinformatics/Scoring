@@ -47,7 +47,7 @@ if os.path.exists(snapLog):
 	os.remove(snapLog)
 logfh = open(snapLog,'w')
 
-pythonCmd = "{scoringPipelineScriptPath} -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(scoringPipelineScriptPath=conf.scoringPipelineScriptPath,runName=runName,sampInputsDir=sampInputsDir)
+pythonCmd = "{scoringPipelineScriptPath} --syapse-mode {syapseMode} -c macs -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(syapseMode=args.syapse_mode,scoringPipelineScriptPath=conf.scoringPipelineScriptPath,runName=runName,sampInputsDir=sampInputsDir)
 
 if rescoreControl > 0:
 	pythonCmd += " --rescore_control={rescore_control}".format(rescoreControl=rescoreControl)
