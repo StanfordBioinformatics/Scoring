@@ -67,6 +67,9 @@ logfh.write(pythonCmd + "\n")
 qsubCmd = "qsub -V -sync y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
 logfh.write(qsubCmd)
 try:
+	#set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
+	syapseConn = SyapseUtils.Utils(mode=args.syapse_mode)
+	syapseConn.setProperty(unique_id=runName,propertyName="scoringStatus",value="Running Analysis") #returns a syapse_client.err.PropertyValueError if value not in property range. returns a syapse_client.err.SemanticConstraintError if the property doesn't belong to the class.
 	stdout,stderr = gbsc_utils.createSubprocess(cmd=qsubCmd,checkRetcode=True)
 except Exception as e:
 	subject = "Chip Scoring {program}: {runName} failed.".format(runName=runName,program=os.path.basename(sys.argv[0]))
@@ -74,9 +77,6 @@ except Exception as e:
 	emailCmd = "mandrill_general_email.py  --sender {sender} --subject \"{subject}\" --to {notifyEmail} --add \"{body}\" ".format(sender=conf.sender,subject=subject,notifyEmail=" ".join(notifyEmail),body=body)
 	print(emailCmd)
 	gbsc_utils.createSubprocess(cmd=emailCmd,checkRetcode=True)
-#set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
-syapseConn = SyapseUtils.Utils(mode=args.syapse_mode)
-syapseConn.setProperty(unique_id=runName,propertyName="scoringStatus",value="Running Analysis") #returns a syapse_client.err.PropertyValueError if value not in property range. returns a syapse_client.err.SemanticConstraintError if the property doesn't belong to the class.
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to 'Running Analysis'
