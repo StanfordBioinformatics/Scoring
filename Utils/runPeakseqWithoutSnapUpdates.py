@@ -69,7 +69,7 @@ logfh.write(qsubCmd)
 try:
 	stdout,stderr = gbsc_utils.createSubprocess(cmd=qsubCmd,checkRetcode=True)
 except Exception as e:
-	subject = "Chip Scoring: Error running {program}".format(program=sys.argv[0])
+	subject = "Chip Scoring {program}: {runName} failed.".format(runName=runName,program=os.path.basename(sys.argv[0]))
 	body = e.message + "\n\nCheck the SGE log files in " + sampDir + " for more details."
 	emailCmd = "mandrill_general_email.py  --sender {sender} --subject \"{subject}\" --to {notifyEmail} --add \"{body}\" ".format(sender=conf.sender,subject=subject,notifyEmail=" ".join(notifyEmail),body=body)
 	print(emailCmd)
