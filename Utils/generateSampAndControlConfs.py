@@ -31,8 +31,8 @@ INPUT FILE FORMAT (-i/--infile):
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,description=description)
 parser.add_argument('-i','--infile',required=True,help="The input file with parameter settings. The file must be formatted as indicated in the program description above.")
 parser.add_argument('--header',action="store_true",help="Presence of this option indicates that there is a single field-header line as the first line in --infile.")
-parser.add_argument('-b',required=True,help="The output file for runs that need bam files. Opened in append mode. If the file pre-exists, it will be overwritten. For any BAM file that isn't found, a line will be logged in this file with the tab-delimited fields 'runName, rundir,lane,fileName'.")
-parser.add_argument('-s',required=True,help="The output file to send runs ready for scoring. Opened in append mode. If the file pre-exists, it will be overwritten. Formatted the same as --infile. For each scoring request in --infile that is valid (has BAM files that can be found), that scoring request (line) is copied to this file.")
+parser.add_argument('-b',required=True,help="The output file for runs that need bam files. If the file pre-exists, it will be overwritten. For any BAM file that isn't found, a line will be logged in this file with the tab-delimited fields 'runName, rundir,lane,fileName'.")
+parser.add_argument('-s',required=True,help="The output file to send runs ready for scoring. If the file pre-exists, it will be overwritten. Formatted the same as --infile. For each scoring request in --infile that is valid (has BAM files that can be found), that scoring request (line) is copied to this file.")
 parser.add_argument('--pipeline',action="store_true", help="Presence of this option indicates to start the batch scoring by calling the script batchScore.py")
 parser.add_argument('-v','--verbose',action="store_true",help="Turn on verbosity")
 
@@ -56,8 +56,8 @@ def getBamFilePath(scoringName,rundir,bamfilename):
 	"""
 	path = runPaths.getBamFilePath(rundir=rundir,fileName=bamfilename)
 	if not path:
-		lane = runPaths.getLaneReg.search(fileName).groups()[0]
-		logMissingBam(scoringName=scoringName,runName=os.path.basename(rundir),lane=lane,bamfilename=fileName)
+		lane = runPaths.getLaneReg.search(bamfilename).groups()[0]
+		logMissingBam(scoringName=scoringName,runName=os.path.basename(rundir),lane=lane,bamfilename=bamfilename)
 		return None	
 	return path
 
@@ -183,11 +183,16 @@ sout.close()
 
 bout.seek(0,2) #go to end of file
 
+ccEmails = " ".join(conf.ccEmails)
+
 if bout.tell():
 	bout.close()
 	#send email to notify about scoring runs that can't proceed due to missing BAMs.
 	subject = "ChIP Scoring Warning: BAMS not found"
-	cmd = "python mandril_general.py --subject {subject}  --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(subject=subject,body=bout.name,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
+	print(subject)
+	cmd = "mandrill_general_email.py --subject \"{subject}\"  --body {body} --to {toEmails} --sender {signature}".format(subject=subject,body=bout.name,signature=conf.sender,toEmails=" ".join(conf.toEmails))
+	if ccEmails:
+		cmd += " --cc {}".join(ccEmails)
 	gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
 bout.close()
 
@@ -197,10 +202,7 @@ if batchScore:
 		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True) #an Exception will have been raised with details on cmd, stdout,stderr, and returncode if the command failed.
 	except Exception as e:
 		subject = "ChIP Scoring Failure: batchScore.py failed"
-		cmd = "python mandril_general.py --subject {subject} --body {body} --to {toEmail} --cc {ccEmail} --sender {signature}".format(subject=subject,body=e.message,signature=conf.signature,toEmail=" ".join(conf.toEmail),ccEmail=" ".join(conf.ccEmail))
-		gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
-		
-	
-	
-	
-	
+		cmd = "mandrill_general_email.py --subject \"{subject}\" --body {body} --to {toEmails} --cc {ccEmails} --sender {signature}".format(subject=subject,body=e.message,signature=conf.sender,toEmails=" ".join(conf.toEmails),ccEmails=" ".join(conf.ccEmails))
+	if ccEmails:
+		cmd += " --cc {}".join(ccEmails)
+	gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
