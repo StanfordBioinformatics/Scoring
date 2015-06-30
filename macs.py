@@ -63,7 +63,7 @@ def form_control_files(name, control):
 		print "mr 1 " + cmd
 	cmds.append(cmd)
 	
-	j = sjm.Job(control.run_name, cmds, queue=QUEUE, project=PROJECT,sched_options="-m e") #QUEUE=seq_pipeline
+	j = sjm.Job(control.run_name, cmds, modules=["samtools/1.2"], queue=QUEUE, project=PROJECT,sched_options="-m e") #QUEUE=seq_pipeline
 	control.add_jobs(name, [j,])
 		
 from peakseq import form_sample_files
@@ -71,8 +71,8 @@ from peakseq import form_sample_files
 def form_sample_files_nodups(name, sample):
 	jobs = []
 	for rep in sample.replicates:
-		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample, rmdups=True), queue=QUEUE, project=PROJECT, memory='16G',sched_options="-m e"))
-	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample, rmdups=True), queue=QUEUE, project=PROJECT, memory='16G',sched_options="-m e"))
+		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample, rmdups=True),modules=["samtools/1.2"], queue=QUEUE, project=PROJECT, memory='16G',sched_options="-m e"))
+	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample, rmdups=True),modules=["samtools/1.2"], queue=QUEUE, project=PROJECT, memory='16G',sched_options="-m e"))
 	sample.add_jobs(name, jobs)
 	
 def form_replicate_files(rep, sample, rmdups=False):

@@ -44,7 +44,7 @@ def form_control_files(name, control):
 	cmd += ' %s' % control.genome
 	cmds.append(cmd)
 	
-	j = sjm.Job(control.run_name, cmds, queue=QUEUE,memory="12G",sched_options="-m e")
+	j = sjm.Job(control.run_name, cmds,modules=["samtools/1.2"], queue=QUEUE,memory="12G",sched_options="-m e")
 	control.add_jobs(name, [j,])
 
 from peakseq import form_sample_files

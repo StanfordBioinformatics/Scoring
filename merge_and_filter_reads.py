@@ -9,7 +9,6 @@ import conf
 from eland import ElandExtendedFile, ElandMultiFile, ElandFile, BwaSamFile, BowtieSamFile, ElandSamFile, IlluminaSamFile
 
 TMP_DIR = conf.GLOBAL_TMP_DIR
-SAMTOOLS_BIN = conf.SAMTOOLS_BINARY
 
 def convert_bwasam(eland_output, sam_input, mismatches):
 	'''Converts SAM file from BWA to Eland, filters out all but unique reads with no more than the specified number of mismatches'''
@@ -123,9 +122,10 @@ def convert_bam(eland_output, bam_input, mismatches):
 	sam_input = os.path.join(TMP_DIR, os.path.basename(bam_input)[:-4
 	] + str(time.time()) + '.sam')
 	print "converting to sam: %s" % sam_input
-	bam2sam_cmd = SAMTOOLS_BIN + ' view -h %s > %s' % (bam_input, sam_input)
+	bam2sam_cmd = 'samtools view -h %s > %s' % (bam_input, sam_input)
 	print bam2sam_cmd
 	subprocess.check_call(bam2sam_cmd, shell=True)
+	print("Converting SAM to ELAND")
 	convert_sam(eland_output, sam_input, mismatches)
 	print "deleting %s" % sam_input
 	os.remove(sam_input)
