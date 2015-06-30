@@ -104,7 +104,7 @@ def form_sample_files(name, sample):
 	for rep in sample.replicates:
 		jobs.append(sjm.Job(rep.rep_name(sample) + '_merge', form_replicate_files(rep, sample), queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	
-	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample), queue=QUEUE, project=PROJECT,sched_options="-m e"))
+	jobs.append(sjm.Job(sample.run_name + '_All_merge', form_replicate_files(sample.combined_replicate, sample),modules=["samtools/1.2"], queue=QUEUE, project=PROJECT,sched_options="-m e"))
 	sample.add_jobs(name, jobs)
 				
 def form_replicate_files(rep, sample):
