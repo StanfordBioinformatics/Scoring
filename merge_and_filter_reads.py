@@ -12,6 +12,7 @@ TMP_DIR = conf.GLOBAL_TMP_DIR
 
 def convert_bwasam(eland_output, sam_input, mismatches):
 	'''Converts SAM file from BWA to Eland, filters out all but unique reads with no more than the specified number of mismatches'''
+	print("Converting BWA BAM file to SAM")
 	input = BwaSamFile(sam_input, 'r')
 	total_passed = 0
 	for i, line in enumerate(input):
@@ -128,7 +129,10 @@ def convert_bam(eland_output, bam_input, mismatches):
 	print("Converting SAM to ELAND")
 	convert_sam(eland_output, sam_input, mismatches)
 	print "deleting %s" % sam_input
-	os.remove(sam_input)
+	try:
+		os.remove(sam_input)
+	except OSError: #don't know why but somehow the file is pre-deleted.
+		pass
 			
 def merge_unique_eland(output, mapped_reads_files, mismatches=2):
 	print "merge_filter %s to %s" % (','.join(mapped_reads_files), output)
