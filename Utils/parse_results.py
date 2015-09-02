@@ -1,57 +1,56 @@
 import os
 import re
 from argparse import ArgumentParser
+import conf
 
 
-repdir="/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human/"
-controldir="/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human/"
-
-if __name__ == "__main__":
-	description = "Parses all the results that normally end-up in an email when the scoring pipeline runs. In the scoring pipeline, the contents of the email are stored in a file called full_results.txt within the results directory of the run. I'm parsing the same stuff here, but from the raw result files that were used to build the full_results.txt report."
-	parser = ArgumentParser(description=description)
-	parser.add_argument('-n','--run-name',required=True,help="The name of the scoring run (directory name w/o leading directory path).")
-	parser.add_argument('--no-rep-stats',action="store_false",help="Presence of this option indicates that there aren't any sample replicates, hence, no replicates statistics can be generated.")
-	
-	args = parser.parse_args()
-	name = args.run_name
-	noRepStats = args.no_rep_stats
+controlScoringPrefixPath = conf.controlScoringPrefixPath
+sampleScoringPrefixPath = conf.sampleScoringPrefixPath
 
 class ScoringRun(object):
 	"""
 	Parses all the results that normally end-up in an email when the scoring pipeline runs. In the scoring pipeline, the contents of the email are stored in a file called full_results.txt within the results directory of the run. I'm parsing the same stuff here, but from the raw result files that were used to build the full_results.txt report.
 	"""
 	numReg = re.compile(r'\d+$')
-	def __init__(self,runName,repStats=False):
+	def __init__(self,runName):
 		self.runName = runName	
-		self.sampleConfFile = os.path.join(repdir,runName,"inputs","sample.conf")
-		self.sampleConf = self.parseConfFile(self.sampleConfFile)
+		self.repDir = os.path.join(sampleScoringPrefixPath,runName)
+		self.sampleConfFile = os.path.join(self.repDir,"inputs","sample.conf")
+		self.sampleConf = parseConfFile(self.sampleConfFile)
 		self.controlConfFile = self.sampleConf['general']['control_results_dir'].rstrip("results") + "inputs/control.conf" 
-		self.controlConf = self.parseConfFile(self.controlConfFile)
-		resultsDir = os.path.join(repdir,runName,"results")
+		self.controlConf = parseConfFile(self.controlConfFile)
+		resultsDir = os.path.join(self.repDir,"results")
 		self.sppFile = os.path.join(resultsDir,'spp_stats.txt')
-		self.sppStats = self.parseSppStats()
-		self.idrFile = os.path.join(resultsDir,'idr_results.txt')
-		self.idrStats = self.parseIdrStats()
-		self.repStatsFile = os.path.join(resultsDir,"rep_stats")
-#		self.repStats = self.parseRepStats()
-		self.pbcStatsFile = os.path.join(resultsDir,"pbc_stats.txt")
-		self.pbcStats = self.parsePbcStats()
 		if not os.path.exists(self.sppFile):
 			raise OSError("Can't locate spp stats file that was expected to be at '{sppFile}'".format(sppFile=self.sppFile))
+		self.sppStats = self.parseSppStats()
+		self.idrFile = os.path.join(resultsDir,'idr_results.txt')
 		if not os.path.exists(self.idrFile):
 			raise OSError("Can't locate idr results file that was expected to be at '{idrFile}'".format(idrFile=self.idrFile))
-		if not os.path.exists(self.repStatsFile):
-#			if not noRepStats:
+		self.idrStats = self.parseIdrStats()
+#RepStats WILL NOT BE IMPLEMENTED. Trupti only uses this for herself, and it's not clear whether snap even stores this informaiton. It's not used for DCC upload
+#		self.repStatsFile = os.path.join(resultsDir,"rep_stats")
+#		self.repStats = False
+#		if not os.path.exists(self.repStatsFile):
+#			if repStats:
 #				raise OSError("Can't locate rep stats file that was expected to be at '{repStatsFile}'".format(repStatsFile=self.repStatsFile))
-			self.repStatsFile = False
+#			self.repStatsFile = False
+#		else:
+#			self.repStats = self.parseRepStats()
+		self.pbcStatsFile = os.path.join(resultsDir,"pbc_stats.txt")
+		if not os.path.exists(self.pbcStatsFile):
+			raise OSError("Can't locate pbc stats file that was expected to be at '{pbcStatsFile}'".format(pbcStatsFile=pbcStatsFile))
+		self.pbcStats = self.parsePbcStats()
 
 
 	def parsePbcStats(self):
 		"""
-		Function : Parses the results from the pbc_stats.txt file. Not sure what the 3 fields for each rep line mean, but I know the last field equals
+		Function : Parses the same information that is reported in the section called 'PBC Results' in the full_results.txt report, but from the raw results file pbc_stats.txt.
+							 Parses the results from the pbc_stats.txt file. Not sure what the 3 fields for each rep line mean, but I know the last field equals
                the first field divided by the second field.
-               Each line gives pbc results for a single replicate. For experiment run SK-N-SH_IRF3_SC-9082_rep1vs2, the pbc_stats.txt file contains:
-
+               Each line gives pbc results for a single replicate. For experiment run SK-N-SH_IRF3_SC-9082_rep1vs2, the pbc_stats.txt file contains (header line not incluted in file):
+			
+								Replicate_Number	Genomic_Locations(Read 1)	Genomic_Locations(Total Mapped)	Percent_of_One_Read_Maps
 		  					Rep1	9784754	  13256811	0.738092592555
 		  					Rep2	15174859	17573090	0.863528212739
 
@@ -86,49 +85,6 @@ class ScoringRun(object):
 			dico[rep]["perc_one_read"] = float(line[3])
 		return dico
 		
-
-	def parseConfFile(self,confFile):
-		"""
-		FUNCTION:
-		This method can be used to parse both the sample conf file and the control conf file. For examples of these files, see 
-		/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human/SK-N-SH_IRF3_SC-9082_rep1vs2/inputs/sample.conf and 
-		/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human/SK-N-SH_Rabbit_IgG/inputs/control.conf, respectively. The sample.conf file as it exists at
-		now (9/4/2014) contains sections containing configuraiton lines particular to that section. A section is delcared at the start of a line and is of the form "[tag]",
-    where "tag" is the section name.
-
-	  Sections in sample.conf:
-    The sample.conf contains a "general" section and a section for each replicate.  Replicate sections begin with the word "replicate",
-		and are followed by a replicate number (i.e. [replicate1] is the section for replicate number 1. There is a replicate section for each sample replicate.
-
-		Sections in control.conf:
-		The control.conf contains a single section, which is called "peakset".
-
-		Regarding both the sample.conf and the control.conf, each line within a section contains a key and value pair, separated by an "=" sign.
-		
-		ARGS: confFile - path to a sample or control configuration file
-		RETURNS: dict. Each key in the dict is a section that was parsed in the conf file. All keys in the dict are the same as the section names found in the conf file,
-                   with the exception of replicate sections, which only have the replicate number forming the key.  The value of each section key in the dict is another dict, 
-									 where the keys are the same as the keys found within a section of the conf file, and the values are the same as the key's values in the conf file.
-		"""
-		sections = {}
-		sectionReg = re.compile(r'^\[(\w+)\]')
-		splitReg = re.compile(r'\s*=\s*')
-		fh = open(confFile,'r')
-		section = "unknown"
-		for line in fh:
-			line = line.strip()
-			if not line:
-				continue
-			if sectionReg.match(line):
-				section = sectionReg.match(line).groups()[0]
-				if section.startswith("replicate"):
-					section = int(section.lstrip("replicate")) #only keep integer ID part
-				sections[section] = {}
-			else:
-				key,val = splitReg.split(line)
-				sections[section][key] = val
-		return sections
-				
 
 #	def parseRepStats(self):
 #		"""
@@ -168,7 +124,7 @@ class ScoringRun(object):
 
 	def parseIdrStats(self):
 		"""
-		Function : Parses the same information that is reported in the section called 'IDR Consistency Results' in the full_results.txt report, but from the raw results files.  
+		Function : Parses the same information that is reported in the section called 'IDR Consistency Results' in the full_results.txt report, but from the raw results idr_results.txt.  
 		Returns  : dict. For example, for an example with two replicates, we can look at the experiment run HeLa-S3_ARID3A_NB100-279. The idr_results.txt file for that run contains the lines:
 
 								Rep1_VS_Rep2=374
@@ -242,11 +198,11 @@ class ScoringRun(object):
 										  'corssCorrVal'      : float, #cross-correlation value
                       'phantomPeak'       : int,   #phantom peak
 											'phantomPeakCorr'   : float, #phantom peak correlation
-											'lowestStrandShift' : int, #lowest strand shift
+											'lowestStrandShift' : int,   #lowest strand shift
                       'minCrossCorr       : float, #min. cross-correlation
                       'nsc'               : float, #Normalized Strand Cross-Correlation Coefficient 
 							        'rsc'               : float, #Relative Strand Cross-Correlation Coefficient
-                      'qualityTag'        : int   #quality tag
+                      'qualityTag'        : int    #quality tag
 										}
 							} 
 		"""
@@ -280,3 +236,56 @@ class ScoringRun(object):
 		return spp	
 
 
+def parseConfFile(confFile):
+	"""
+	FUNCTION:
+	This method can be used to parse both the sample conf file and the control conf file. For examples of these files, see 
+	/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human/SK-N-SH_IRF3_SC-9082_rep1vs2/inputs/sample.conf and 
+	/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human/SK-N-SH_Rabbit_IgG/inputs/control.conf, respectively. The sample.conf file as it exists at
+	now (9/4/2014) contains sections containing configuration lines particular to that section. A section is delcared at the start of a line and is of the form "[tag]",
+    where "tag" is the section name.
+
+  Sections in sample.conf:
+    The sample.conf contains a "general" section and a section for each replicate.  Replicate sections begin with the word "replicate",
+	and are followed by a replicate number (i.e. [replicate1] is the section for replicate number 1. There is a replicate section for each sample replicate.
+
+	Sections in control.conf:
+	The control.conf contains a single section, which is called "peakset".
+
+	Regarding both the sample.conf and the control.conf, each line within a section contains a key and value pair, separated by an "=" sign.
+	
+	ARGS: confFile - path to a sample or control configuration file
+	RETURNS: dict. Each key in the dict is a section that was parsed in the conf file. All keys in the dict are the same as the section names found in the conf file,
+                   with the exception of replicate sections, which only have the replicate number forming the key.  The value of each section key in the dict is another dict, 
+								 where the keys are the same as the keys found within a section of the conf file, and the values are the same as the key's values in the conf file.
+	"""
+	sections = {}
+	sectionReg = re.compile(r'^\[(\w+)\]')
+	splitReg = re.compile(r'\s*=\s*')
+	fh = open(confFile,'r')
+	section = "unknown"
+	for line in fh:
+		line = line.strip()
+		if not line:
+			continue
+		if sectionReg.match(line):
+			section = sectionReg.match(line).groups()[0]
+			if section.startswith("replicate"):
+				section = int(section.lstrip("replicate")) #only keep integer ID part
+			sections[section] = {}
+		else:
+			key,val = splitReg.split(line)
+			sections[section][key] = val
+	return sections
+
+
+if __name__ == "__main__":
+	description = "Parses all the results that normally end-up in an email when the scoring pipeline runs. In the scoring pipeline, the contents of the email are stored in a file called full_results.txt within the results directory of the run. I'm parsing the same stuff here, but from the raw result files that were used to build the full_results.txt report."
+	parser = ArgumentParser(description=description)
+	parser.add_argument('-r','--run-name',required=True,help="The name of the scoring run (directory name w/o leading directory path).")
+	#parser.add_argument('--no-rep-stats',action="store_false",help="Presence of this option indicates that there aren't any sample replicates, hence, no replicates statistics can be generated.")
+	
+	args = parser.parse_args()
+	runName = args.run_name
+	#noRepStats = args.no_rep_stats
+	s = ScoringRun(runName=runName)
