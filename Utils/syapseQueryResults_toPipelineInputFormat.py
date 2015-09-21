@@ -1,4 +1,5 @@
 import SyapseUtils
+import os
 
 
 def getReadyToScoreFromSyapse(mode):
@@ -109,7 +110,7 @@ def convertQueryResultRecord(record):
 
 if __name__ == "__main__":
 	from argparse import ArgumentParser
-	description = "Either performs a query against Syapse to get all Scoring Requests that are with status 'Awaiting Scoring', or accepts an input file with all the scoring requests that need to be scored. When no input file is supplied, the former occurs, queyring Syapse with the function call SyapseUtils.getReadyToScore(). When infile is supplied, it must have tab delimited fields, where each line represent a row returned by the query in the function just mentioned. An output file is created with the query results transformed into the format that the scoring pipeline understands for batch input."
+	description = "Either performs a query against Syapse to get all Scoring Requests that are with status 'Awaiting Scoring', or accepts an input file with all the scoring requests that need to be scored. When no input file is supplied, the former occurs, queyring Syapse with the function call SyapseUtils.getReadyToScore(). See the documentation of that function for details about the fields returned for each result. When infile is supplied, it must have tab delimited fields, where each line represents a row returned by the query in the function just mentioned. An output file is created with the query results transformed into the format that the scoring pipeline understands for batch input. Finally, the scoring pipeline can optionally be initiated when the --run-pipeline option is provided."
 	parser = ArgumentParser(description=description)
 	parser.add_argument('-i','--infile',help="The tab-delimited file containing results from the Syapse query defined in the encode repository at encode/dcc_submit/SyapseUtils.getReadyToScore(). See documentation in that funciton for information on the format of the returned fields.")
 	parser.add_argument('-o','--outfile',required=True,help="The output file name that will be used as input into the batch scoring pipeline.")
@@ -121,7 +122,7 @@ if __name__ == "__main__":
 	outfile = args.outfile
 	outputDirectory = os.path.dirname(outfile)
 	mode = args.mode
-	runPipeline = args.run
+	runPipeline = args.run_pipeline
 
 	if infile:
 		fh = open(infile,'r')
@@ -133,6 +134,8 @@ if __name__ == "__main__":
 
 	else:
 		queryResultRows = getReadyToScoreFromSyapse(mode=mode)
+		print("Found {} scoring requests.".format(len(queryResultRows)))
+		print(queryResultRows)
 		conversion = convertAllQueryRows(queryResultRows)
 
 	fout = open(outfile,'w')
