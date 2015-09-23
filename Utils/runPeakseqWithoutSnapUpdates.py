@@ -83,5 +83,10 @@ except Exception as e:
 	gbsc_utils.createSubprocess(cmd=emailCmd,checkRetcode=True)
 
 
-#update Syapse's Chip Seq Scoring object's Scoring Status attribute to 'Running Analysis'
+#update Syapse's Chip Seq Scoring object's Scoring Status attribute to in progress:
+syapse = SyapseUtils.Syapse(mode="prod")
+conn = syapse.connect()
+ai = conn.kb.retrieveAppIndividualByUniqueId(runName)
+ai.scoringStatus.set("Processing Scoring Results")
+ai = syapseConn.kb.saveAppIndividual(ai)
 logfh.close()
