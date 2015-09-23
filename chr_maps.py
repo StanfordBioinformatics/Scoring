@@ -348,19 +348,19 @@ genomes = {
 
 
 peakseq_mappability_file = {
-	'hg19_female' : '/srv/gs1/projects/scg/Scoring/mappability/hg19_female.txt',
-	'hg19_male' : '/srv/gs1/projects/scg/Scoring/mappability/hg19_male.txt',
-	'maize' : '/srv/gs1/projects/scg/Scoring/mappability/maize_agpv1.txt',
-	'mm9_female' : '/srv/gs1/projects/scg/Scoring/mappability/mm9_female.txt',
-	'mm9_male' : '/srv/gs1/projects/scg/Scoring/mappability/mm9_male.txt',
-	'mm9_male_yale' : '//srv/gs1/projects/scg/Scoring/mappability/mm9_male.txt',
-	'panTro2' : '/srv/gs1/projects/scg/Scoring/mappability/panTro2.txt',
-	'rheMac2' : '/srv/gs1/projects/scg/Scoring/mappability/rheMac2.txt',
-	'ucsc_hg18' : '/srv/gs1/projects/scg/Scoring/mappability/ucsc_hg18.txt',
-	'WS182' : '/srv/gs1/projects/scg/Scoring/mappability/WS182.txt',
-	'WS220' : '/srv/gs1/projects/scg/Scoring/mappability/WS182.txt',
-	'yeast_scg_5_08' : '/srv/gs1/projects/scg/Scoring/mappability/yeast_scg_5_08.txt',
-	'arabidopsis_tair9' : '/srv/gs1/projects/scg/Scoring/mappability/arabidopsis_tair9.txt',
+	'hg19_female' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/hg19_female.txt',
+	'hg19_male' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/hg19_male.txt',
+	'maize' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/maize_agpv1.txt',
+	'mm9_female' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/mm9_female.txt',
+	'mm9_male' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/mm9_male.txt',
+	'mm9_male_yale' : '//srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/mm9_male.txt',
+	'panTro2' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/panTro2.txt',
+	'rheMac2' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/rheMac2.txt',
+	'ucsc_hg18' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/ucsc_hg18.txt',
+	'WS182' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/WS182.txt',
+	'WS220' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/WS182.txt',
+	'yeast_scg_5_08' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/yeast_scg_5_08.txt',
+	'arabidopsis_tair9' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/mappability/arabidopsis_tair9.txt',
 }
 
 
@@ -402,17 +402,17 @@ IDR_THRESHOLDS = {
 IDR_BIN_DIR = {
 	# Verify that IDR directories contain both IDR binaries AND
 	# a correct genome_table.txt file (see IDR documentation)
-	'hg19_female' : '/srv/gs1/projects/scg/Scoring/idr/bins/human_hg19',
-	'hg19_male' : '/srv/gs1/projects/scg/Scoring/idr/bins/human_hg19',
-	'fly_dm3' : '/srv/gs1/projects/scg/Scoring/idr/bins/fly_dm3',
-	'r5-32' : '/srv/gs1/projects/scg/Scoring/idr/bins/fly_r5_32',
-	'WS182' : '/srv/gs1/projects/scg/Scoring/idr/bins/worm_ws220',
-	'WS220' : '/srv/gs1/projects/scg/Scoring/idr/bins/worm_ws220',
-	'mm_ncbi_37' : '/srv/gs1/projects/scg/Scoring/idr/bins/mouse_mm9',
-	'mm9_male' : '/srv/gs1/projects/scg/Scoring/idr/bins/mouse_mm9',
-	'mm9_female' : '/srv/gs1/projects/scg/Scoring/idr/bins/mouse_mm9',
-	'panTro2' : '/srv/gs1/projects/scg/Scoring/idr/bins/chimp_pantro2',
-	'rheMac2' : '/srv/gs1/projects/scg/Scoring/idr/bins/rhesus_rhemac2',
+	'hg19_female' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/human_hg19',
+	'hg19_male' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/human_hg19',
+	'fly_dm3' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/fly_dm3',
+	'r5-32' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/fly_r5_32',
+	'WS182' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/worm_ws220',
+	'WS220' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/worm_ws220',
+	'mm_ncbi_37' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/mouse_mm9',
+	'mm9_male' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/mouse_mm9',
+	'mm9_female' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/mouse_mm9',
+	'panTro2' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/chimp_pantro2',
+	'rheMac2' : '/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/idr/bins/rhesus_rhemac2',
 }
 
 

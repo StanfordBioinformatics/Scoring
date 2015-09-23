@@ -24,7 +24,7 @@ if [[ ! -d ${ODIR} ]]
     exit 1
 fi
 
-OFILE="${ODIR}/$(echo $(basename ${MACSFILE} '_peaks.xls')).regionPeak.gz"
+OFILE="${ODIR}/$(echo $(basename ${MACSFILE} '_peaks.xls')).regionPeak"
 
 # XLS format
 # chr start stop length summit tags -10log10(pvalue) fold_enrichment %FDR
@@ -48,12 +48,10 @@ if [[ ${hasFDR} -eq 1 ]]
     sed -r -e '/^#/d' -e '/^$/d' "${MACSFILE}" | \
 	sed 1d | \
 	sort -k7nr,7nr | \
-	awk '$2 < 1 {$2=1} {printf "%s\t%d\t%d\t%d\t%s\t.\t%s\t%s\t%f\t%d\n",$1,$2-1,$3,NR,$6,$8,$7/10,-log(($9+1e-30)/100)/log(10),$5}' | \
-	gzip -c > ${OFILE}
+	awk '$2 < 1 {$2=1} {printf "%s\t%d\t%d\t%d\t%s\t.\t%s\t%s\t%f\t%d\n",$1,$2-1,$3,NR,$6,$8,$7/10,-log(($9+1e-30)/100)/log(10),$5}' > ${OFILE}
 else
     sed -r -e '/^#/d' -e '/^$/d' "${MACSFILE}" | \
 	sed 1d | \
 	sort -k7nr,7nr | \
-	awk '$2 < 1 {$2=1} {printf "%s\t%d\t%d\t%d\t%s\t.\t%s\t%s\t-1\t%d\n",$1,$2-1,$3,NR,$6,$8,$7/10,$5}' | \
-	gzip -c > ${OFILE}
+	awk '$2 < 1 {$2=1} {printf "%s\t%d\t%d\t%d\t%s\t.\t%s\t%s\t-1\t%d\n",$1,$2-1,$3,NR,$6,$8,$7/10,$5}' > ${OFILE}
 fi
