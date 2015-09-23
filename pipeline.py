@@ -365,45 +365,7 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 			peakcaller.form_sample_files('form_sample_files', sample)
 		
 		peakcaller.calc_pbc('calc_pbc', control, sample)
-		peakcaller.run_peakcaller('peakcaller', control, sample, peakcaller_options)
-		add_dependencies(sample.jobs['form_sample_files'], sample.jobs['calc_pbc'])
-		add_dependencies(sample.jobs['form_sample_files'], sample.jobs['peakcaller'])
-		if control.jobs:
-			add_dependencies(control.jobs['form_control_files'], sample.jobs['peakcaller'])
-		peakcaller.merge_results('merge_results', sample)
-		add_dependencies(sample.jobs['peakcaller'], sample.jobs['merge_results'])
-		if archive_results:
-			peakcaller.archive_sample('archive_sample', sample, control,force=force)
-			add_dependencies(sample.jobs['merge_results'], sample.jobs['archive_sample'])
-          		
-		# IDR Analysis
-		peakcaller.form_idr_inputs('idr_format_inputs', sample)
-		add_dependencies(sample.jobs['merge_results'], sample.jobs['idr_format_inputs'])
-		if len(sample.replicates) > 1:
-			peakcaller.replicate_scoring('replicate_scoring', sample)
-			add_dependencies(sample.jobs['merge_results'], sample.jobs['replicate_scoring'])
-			if archive_results:
-				add_dependencies(sample.jobs['replicate_scoring'], sample.jobs['archive_sample'])
-			add_dependencies(sample.jobs['idr_format_inputs'], sample.jobs['replicate_scoring'])
-		peakcaller.idr_analysis('idr_analysis', sample)
-		add_dependencies(sample.jobs['idr_format_inputs'], sample.jobs['idr_analysis'])
- 		peakcaller.idr_filter('idr_filter', sample)
- 		add_dependencies(sample.jobs['idr_analysis'], sample.jobs['idr_filter'])
- 		if archive_results:
- 			add_dependencies(sample.jobs['idr_filter'], sample.jobs['archive_sample'])
-		
-		# Cross-Correlation Analysis
-		idr.cross_correlation_analysis('cross_correlation_analysis', sample, no_duplicates=no_duplicates, options=xcorrelation_options)
-		add_dependencies(sample.jobs['form_sample_files'], sample.jobs['cross_correlation_analysis'])
-		if archive_results:
-			add_dependencies(sample.jobs['cross_correlation_analysis'], sample.jobs['archive_sample'])
-		add_dependencies(sample.jobs['cross_correlation_analysis'], sample.jobs['peakcaller'])
-			
-		jobs += sample.all_jobs()
-
-	if emails:
-		print "emails" % emails
-		jobs.append(peakcaller.mail_results(sample, control, run_name, emails))
+		peakcaller.run_name, emails))
 	#jobs.append(peakcaller.cleanup(sample, control))
 	
 	if SNAP_RUN and sample_conf:
@@ -499,3 +461,8 @@ if __name__ == '__main__':
 		parser.error("Invalid Peakcaller selected.  Options are 'peakseq', 'macs', 'macs2',  'spp' or 'spp_nodups'")
 
 	main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
+	syapse = SyapseUtils.Syapse(mode="prod")
+	conn = syapse.connect()
+	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
+	ai.scoringStatus.set("Scoring Completed")
+	ai = conn.kb.saveAppIndividual(ai)
