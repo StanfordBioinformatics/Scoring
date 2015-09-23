@@ -44,7 +44,7 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
                 print rep
 		# Convert merged and filtered eland file to tagAlign
 		rep.tagAlign = os.path.join(rep.temp_dir(sample), '%s.tagAlign' % rep.rep_name(sample))
-		cmd = os.path.join(BIN_DIR, 'convert2tagAlign.py')
+		cmd = "/srv/gsfs0/software/python/python-2.7/bin/python " + os.path.join(BIN_DIR, 'convert2tagAlign.py')
 		cmd += ' -e %s' %	 rep.merged_file_location
 	        cmd += ' -o %s' % rep.tagAlign
 #		cmd += ' %s' % sample.genome
