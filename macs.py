@@ -194,11 +194,11 @@ def form_idr_inputs(name, sample):
 	if not os.path.exists(idrDir):
 		os.makedirs(idrDir)
 	jobs = []
+	macs2npk_script = os.path.join(BIN_DIR,'macs2npk.sh')
 	for rep in sample.replicates + [sample.combined_replicate,]:
 		cmds = []
 		rep.narrowPeak = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '.regionPeak')
-		cmd = os.path.join(SUBMISSION_BIN_DIR, 'macs2npk.sh')
-		cmd += ' %s %s' % (os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_peaks.xls'), rep.results_dir(sample))
+		cmd = macs2npk_script + ' %s %s' % (os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_peaks.xls'), rep.results_dir(sample))
 		np_job = sjm.Job(rep.rep_name(sample) + '_hits2narrowPeak', cmd, queue=QUEUE, project=PROJECT,sched_options="-m e")
 		jobs.append(np_job)
 		cmd = 'head -n 300000 %s > %s.temp' % (rep.narrowPeak, rep.narrowPeak)
@@ -210,9 +210,8 @@ def form_idr_inputs(name, sample):
 		# Pseudoreplicates
 		cmds = []
 		rep.narrowPeak_pr1 = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_PR1.regionPeak')
-		cmd = os.path.join(SUBMISSION_BIN_DIR, 'macs2npk.sh')
 		pr1_results_dir = os.path.join(sample.results_dir, rep.rep_name(sample) + '_PR1')
-		cmd += ' %s %s' % (os.path.join(pr1_results_dir, rep.rep_name(sample) + '_PR1_peaks.xls'), rep.results_dir(sample))
+		cmd = macs2npk_script + ' %s %s' % (os.path.join(pr1_results_dir, rep.rep_name(sample) + '_PR1_peaks.xls'), rep.results_dir(sample))
 		np_job = sjm.Job(rep.rep_name(sample) + '_PR1_hits2narrowPeak', cmd, queue=QUEUE, project=PROJECT,sched_options="-m e")
 		jobs.append(np_job)
 		cmd = 'head -n 300000 %s > %s.temp && mv %s.temp %s' % (rep.narrowPeak_pr1, rep.narrowPeak_pr1, rep.narrowPeak_pr1, rep.narrowPeak_pr1)
@@ -221,9 +220,8 @@ def form_idr_inputs(name, sample):
 		
 		cmds = []
 		rep.narrowPeak_pr2 = os.path.join(rep.results_dir(sample), rep.rep_name(sample) + '_PR2.regionPeak')
-		cmd = os.path.join(SUBMISSION_BIN_DIR, 'macs2npk.sh')
 		pr2_results_dir = os.path.join(sample.results_dir, rep.rep_name(sample) + '_PR2')
-		cmd += ' %s %s' % (os.path.join(pr2_results_dir, rep.rep_name(sample) + '_PR2_peaks.xls'), rep.results_dir(sample))
+		cmd = macs2npk_script + ' %s %s' % (os.path.join(pr2_results_dir, rep.rep_name(sample) + '_PR2_peaks.xls'), rep.results_dir(sample))
 		np_job = sjm.Job(rep.rep_name(sample) + '_PR2_hits2narrowPeak', cmd, queue=QUEUE, project=PROJECT,sched_options="-m e")
 		jobs.append(np_job)
 		cmd = 'head -n 300000 %s > %s.temp && mv %s.temp %s' % (rep.narrowPeak_pr2, rep.narrowPeak_pr2, rep.narrowPeak_pr2, rep.narrowPeak_pr2)

@@ -1,5 +1,6 @@
 import SyapseUtils
 import os
+from gbsc_utils import gbsc_utils
 
 
 def getReadyToScoreFromSyapse(mode):
@@ -40,9 +41,11 @@ def createSampleReplicateName(runName,lane,barcode):
 	Args     : runName - str. The name of a sequencing run.
 						 lane    - str or int. Number of the lane sequencing. Must be a number w/o leading zeros.
 						 barcode - str. The barcode sequenced on the lane.
+	Example : Given runName="150619_TENNISON_0369_AC7CM2ACXX", lane=1, barcode="GATCAG"
+						Returns "150619_TENNISON_0369_AC7CM2ACXX_L1_GATCAG_pf.bam".
 	"""
 	lane = str(lane)
-	return runName + 	"_L" + lane + "_" + "pf.bam"
+	return runName + 	"_L" + lane + "_" + barcode + "_pf.bam"
 
 def generateControlName(scoringNameUid,controlLibraryName):
 	"""
@@ -120,6 +123,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	infile = args.infile
 	outfile = args.outfile
+	outfileDirectory = os.path.dirname(os.path.realpath(outfile))
 	outputDirectory = os.path.dirname(outfile)
 	mode = args.mode
 	runPipeline = args.run_pipeline
@@ -133,8 +137,9 @@ if __name__ == "__main__":
 		fh.close()
 
 	else:
+		print("Querying Syapse for experiments ready to be scored.")
 		queryResultRows = getReadyToScoreFromSyapse(mode=mode)
-		print("Found {} scoring requests.".format(len(queryResultRows)))
+		print("Query Results:")
 		print(queryResultRows)
 		conversion = convertAllQueryRows(queryResultRows)
 
@@ -146,7 +151,7 @@ if __name__ == "__main__":
 		fout.write(s + "\t\t\t") #scoringName + 2 empty, nolonger used fields
 		fout.write(ereps[0] + "\t") #must be at least one experiment replicate
 		if len(ereps) > 1:
-			fout.write(ereps[0] + "\t") #may have more than two reps, but pipeline only supports upto two replicates
+			fout.write(ereps[1] + "\t") #may have more than two reps, but pipeline only supports upto two replicates
 		else:
 			fout.write("\t\t")
 		fout.write(control + "\t")
@@ -159,10 +164,14 @@ if __name__ == "__main__":
 	fout.close()
 		
 	if runPipeline:
-		curTime = gbsc_utils.getCurTime() #year-month-day.second
+		curTime = gbsc_utils.getCurTime() #year-month-day.hour.minute.second
 		needsBamsFileName = os.path.join(outfileDirectory,curTime + "_scoringsNeedingBams.txt")
 		readyToScoreFileName = os.path.join(outfileDirectory,curTime + "_readyToScore.txt")
+		print("Generating the conf files for the sample and control")
 		cmd = "python generateSampAndControlConfs.py	-i {outfile} -s {readyToScoreFileName} -b {needsBamsFileName} ".format(outfile=fout.name,readyToScoreFileName=readyToScoreFileName,needsBamsFileName=needsBamsFileName)
-		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetCode=True)
-		cmd = "batchScore.py -i {infile} -p".format(infile=readyToScoreFileName)
-		gbsc_utils.createSubprocess(cmd=cmd,checkRetCode=True)
+		print(cmd)
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		print("Starting the batch scoring pipeline")
+		cmd = "batchScore.py -i {infile} -p --syapse-mode {mode}".format(infile=readyToScoreFileName,mode=mode)
+		print(cmd)
+		gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)

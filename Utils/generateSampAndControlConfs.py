@@ -2,15 +2,15 @@ import shutil
 import argparse
 import re
 import os
-from SequencingRuns import runPaths
-import gbsc_utils
+from gbsc_utils.SequencingRuns import runPaths
+from gbsc_utils import gbsc_utils
 import conf
 
 genome = "hg19_male"
 mappability_file = "/srv/gs1/apps/snap_support/production/current/hg19_male.txt"
 q_value_thresholds = "0.1,0.05,0.01,0.001"
 bin_size = 10000
-peakseq_binary = "/srv/gs1/projects/scg/Scoring/Peak-Seq_v1.02/Peak-Seq_v1.02"
+peakseq_binary = conf.peakseq_binary
 
 description = """
 OVERVIEW:

@@ -44,10 +44,10 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
                 print rep
 		# Convert merged and filtered eland file to tagAlign
 		rep.tagAlign = os.path.join(rep.temp_dir(sample), '%s.tagAlign' % rep.rep_name(sample))
-		cmd = os.path.join(SUBMISSION_BIN_DIR, 'convert2tagAlign.py')
-		cmd += ' %s' %	 rep.merged_file_location
-	        cmd += ' %s' % rep.tagAlign
-		cmd += ' %s' % sample.genome
+		cmd = os.path.join(BIN_DIR, 'convert2tagAlign.py')
+		cmd += ' -e %s' %	 rep.merged_file_location
+	        cmd += ' -o %s' % rep.tagAlign
+#		cmd += ' %s' % sample.genome
 		cmds.append(cmd)
 	        print 'SPP Cmd 1 ', cmd	
 		# Run SPP
@@ -71,5 +71,5 @@ def cross_correlation_analysis(name, sample, no_duplicates=False, options=None):
 		ctr += 1
 		cmds.append(cmd)
 		
-	sample.add_jobs(name, [sjm.Job('x_correlation_' + sample.run_name, cmds, queue=QUEUE, project=PROJECT, memory='8G',sched_options="-m e"),])
+	sample.add_jobs(name, [sjm.Job('x_correlation_' + sample.run_name, cmds, queue=QUEUE, project=PROJECT, modules = ["python/2.7"], memory='8G',sched_options="-m e"),])
 	

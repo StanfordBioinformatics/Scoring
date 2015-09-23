@@ -3,7 +3,7 @@
 import os
 import sys
 from argparse import ArgumentParser
-import gbsc_utils #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
+from gbsc_utils import gbsc_utils #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
 import SyapseUtils #module load gbsc/encode
 import conf
 
@@ -64,7 +64,7 @@ pythonCmd += " {controlConf} {sampConf}".format(controlConf=controlConf,sampConf
 pythonCmd += " 2> {stderr}".format(stderr=stderr)
 logfh.write(pythonCmd + "\n")
 
-qsubCmd = "qsub -V -sync y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
+qsubCmd = "qsub -V -R y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
 logfh.write(qsubCmd)
 #
 try:
@@ -76,8 +76,10 @@ try:
 except Exception as e:
 	subject = "Chip Scoring {program}: {runName} failed.".format(runName=runName,program=os.path.basename(sys.argv[0]))
 	body = e.message + "\n\nCheck the SGE log files in " + sampDir + " for more details."
+	print(subject)
+	print(body)
 	emailCmd = "mandrill_general_email.py  --sender {sender} --subject \"{subject}\" --to {notifyEmail} --add \"{body}\" ".format(sender=conf.sender,subject=subject,notifyEmail=" ".join(notifyEmail),body=body)
-	print(emailCmd)
+	#print(emailCmd)
 	gbsc_utils.createSubprocess(cmd=emailCmd,checkRetcode=True)
 
 

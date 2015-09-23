@@ -41,10 +41,10 @@ for line in fh:
 	score = 0
 	if numExactMatch == "1":
 		score = 1000
-	elif numOneMismatch == "1":
+	elif numOneMismatch != "0":
 		score = 250
-	elif numTwoMismatch == "1":
-		score = 64
+	elif numTwoMismatch != "0":
+		score = 63
 	fout.write(str(score) + "\t")
 
 	if matchDirection == "F":
@@ -52,3 +52,4 @@ for line in fh:
 	else:
 		fout.write("-")
 	fout.write("\n")
+fout.close()

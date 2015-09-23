@@ -7,7 +7,7 @@ import os
 import datetime
 import conf
 import SyapseUtils #module load gbsc/encode
-import gbsc_utils  #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
+from gbsc_utils import gbsc_utils  #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
 
 #sampleRunPrefix = "/srv/gs1/projects/scg/SNAP_Scoring/production/replicates/human" #old path on gs1
 description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb. The script generateSampAndControlConfs.py needs to have been first called because it's responsible for creating the sample and control configuration files that the pipeline uses."
@@ -89,9 +89,10 @@ for line in fh:
 	print(cmd)
 	#let progam continue if runPeakseqWithoutSnapUpdates.py failes, since an email will already be sent in that case, to the 'sender' specified in conf.py.
 	try:
-		popen = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		print(stdout,stderr)
 	except Exception as e:
-		print(e.message)
+		raise
 	if limit:
 		count += 1
 		if count >= limit:

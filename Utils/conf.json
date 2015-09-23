@@ -1,6 +1,8 @@
 {
 
-	"scoringPipelineScriptPath": "/srv/gs1/projects/scg/Scoring/pipeline2/pipeline.py",
+	"peakseq_binary": "/srv/gsfs0/software/peakseq/1.3.1/bin/PeakSeq",
+	"mappability_file": "/srv/gs1/apps/snap_support/production/current/hg19_male.txt",
+	"scoringPipelineScriptPath": "/srv/gsfs0/projects/gbsc/workspace/nathankw/Scoring/pipeline2/pipeline.py",
 		
 	"scoringPathPrefix": {
 			"control" : "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human",
