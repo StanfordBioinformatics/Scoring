@@ -84,8 +84,8 @@ except Exception as e:
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to in progress:
-syapse = SyapseUtils.Syapse(mode="prod")
-conn = syapse.connect()
+syapse = SyapseUtils.Utils(mode="prod")
+conn = syapse.conn
 ai = conn.kb.retrieveAppIndividualByUniqueId(runName)
 ai.scoringStatus.set("Processing Scoring Results")
 ai = conn.kb.saveAppIndividual(ai)

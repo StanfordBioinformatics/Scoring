@@ -4,8 +4,8 @@ from gbsc_utils import gbsc_utils
 
 
 def getReadyToScoreFromSyapse(mode):
-	syapse = SyapseUtils.Syapse(mode=mode)
-	conn = syapse.connect()
+	syapse = SyapseUtils.Utils(mode=mode)
+	conn = syapse.conn
 	rows = conn.kb.executeSyQLQuery(SyapseUtils.getReadyToScore()).rows
 	return rows
 		

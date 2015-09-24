@@ -500,8 +500,8 @@ if __name__ == '__main__':
 
 	main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
 
-	syapse = SyapseUtils.Syapse(mode="prod")
-	conn = syapse.connect()
+	syapse = SyapseUtils.Utils(mode="prod")
+	conn = syapse.conn
 	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
 	ai.scoringStatus.set("Scoring Completed")
 	ai = conn.kb.saveAppIndividual(ai)
