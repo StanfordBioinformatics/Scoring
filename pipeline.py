@@ -279,7 +279,7 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 			sjmfile = os.path.join(log_dir, run_name + '_MakeSingleEndMappings.jobs')
 			print ("Removing reverse reads in control and sample BAM files. Commands are in SJM file {sjmfile}".format(sjmfile=sjmfile))
 			try:
-				submission.run(sjmfile)
+				submission.run(sjmfile,foreground=True)
 			except subprocess.CalledProcessError:
 				raise
 

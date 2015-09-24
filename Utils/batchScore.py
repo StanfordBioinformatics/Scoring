@@ -89,7 +89,7 @@ for line in fh:
 	print(cmd)
 	#let progam continue if runPeakseqWithoutSnapUpdates.py failes, since an email will already be sent in that case, to the 'sender' specified in conf.py.
 	try:
-		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
 		print(stdout,stderr)
 	except Exception as e:
 		raise
