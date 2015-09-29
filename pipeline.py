@@ -504,4 +504,4 @@ if __name__ == '__main__':
 	conn = syapse.conn
 	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
 	ai.scoringStatus.set("Scoring Completed")
-	ai = conn.kb.saveAppIndividual(ai)
+	conn.kb.saveAppIndividual(ai)
