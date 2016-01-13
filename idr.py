@@ -9,12 +9,11 @@ BIN_DIR = conf.BIN_DIR
 SUBMISSION_BIN_DIR = conf.SUBMISSION_BIN_DIR
 QUEUE = conf.QUEUE
 PROJECT = conf.SGE_PROJECT
-R_BINARY = conf.R_BINARY
 SPP_BINARY = conf.SPP_BINARY
 SPP_BINARY_NO_DUPS = conf.SPP_BINARY_NO_DUPS
 	
 def idr_analysis_cmd(hit1, hit2, output, ranking_measure, genome):
-	cmd = R_BINARY + ' '
+	cmd = "Rscript "
 	cmd += os.path.join(IDR_BIN_DIR[genome], 'batch-consistency-analysis.r')
 	cmd += ' %s' % hit1
 	cmd += ' %s' % hit2
