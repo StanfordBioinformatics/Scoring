@@ -2,15 +2,26 @@
 
 import os
 import sys
+import logging
 from argparse import ArgumentParser
+
 from gbsc_utils import gbsc_utils #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
-import SyapseUtils #module load gbsc/encode
+import syapse_scgpm #module load gbsc/encode
 import conf
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+ch= logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:   %(message)s')
+ch.setFormatter(f_formatter)
+logger.addHandler(ch) 
+
 
 description = ""
 parser = ArgumentParser(description=description)
 
-parser.add_argument('--syapse-mode',required=True,help="A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=SyapseUtils.Syapse.knownModes))
+parser.add_argument('--syapse-mode',required=True,help="A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()))
 parser.add_argument('--name',required=True,help="The name of the scoring run (This should be the ChIP Seq Scoring object's UID in Syapse).")
 parser.add_argument('--control',required=True,help="The control name.")
 parser.add_argument('--genome',default="hg19_male",help="The genome to which the sample and control replicates were mapped.")
@@ -65,13 +76,14 @@ pythonCmd += " 2> {stderr}".format(stderr=stderr)
 logfh.write(pythonCmd + "\n")
 
 qsubCmd = "qsub -V -R y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
-logfh.write(qsubCmd)
 #
 try:
 #	#set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
 #	syapseConn = SyapseUtils.Utils(mode=args.syapse_mode)
 #	syapseConn.setProperty(unique_id=runName,propertyName="scoringStatus",value="Running Analysis") #returns a syapse_client.err.PropertyValueError if value not in property range. returns a syapse_client.err.SemanticConstraintError if the property doesn't belong to the class.
 #	print(qsubCmd)
+	logfh.write(qsubCmd)
+	logger.info(qsubCmd)
 	stdout,stderr = gbsc_utils.createSubprocess(cmd=qsubCmd,checkRetcode=True)
 except Exception as e:
 	subject = "Chip Scoring {program}: {runName} failed.".format(runName=runName,program=os.path.basename(sys.argv[0]))
@@ -84,7 +96,7 @@ except Exception as e:
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to in progress:
-syapse = SyapseUtils.Utils(mode="prod")
+syapse = syapse_scgpm.al.Utils(mode="prod")
 conn = syapse.conn
 ai = conn.kb.retrieveAppIndividualByUniqueId(runName)
 ai.scoringStatus.set("Processing Scoring Results")

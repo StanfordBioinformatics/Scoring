@@ -1,22 +1,23 @@
 #!/usr/bin/env python
 
 import argparse
+import time
 import subprocess
 import shutil
 import os
 import datetime
 import conf
-import SyapseUtils #module load gbsc/encode
+import syapse_scgpm  #module load gbsc/encode/current
 from gbsc_utils import gbsc_utils  #module load gbsc/endode (which in turn loads gbsc/gbsc_utils)
 
 #sampleRunPrefix = "/srv/gs1/projects/scg/SNAP_Scoring/production/replicates/human" #old path on gs1
 description = "Runs multiple scoring jobs in parallel, calling runPeakseqWithoutSnapUpdates.rb. The script generateSampAndControlConfs.py needs to have been first called because it's responsible for creating the sample and control configuration files that the pipeline uses."
 parser = argparse.ArgumentParser(description=description)
-parser.add_argument('--syapse-mode',required=True,help="A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=SyapseUtils.Syapse.knownModes))
+parser.add_argument('--syapse-mode',required=True,help="A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()))
 parser.add_argument('-i','--infile',required=True,help="Batch input file.")
 parser.add_argument('-r','--run-field-pos',default=0,help="Run name field position (0-base).")
 parser.add_argument('-c','--control-field-pos',default=5,help="Control name field position (0-base).")
-parser.add_argument('-l','--limit',type=int,help="The number of scoring jobs to run (which will run in parallel as well). For example, a limit of 5 would amount to only running the first 5 jobs (rows) in --infile.")
+parser.add_argument('-l','--limit',type=int,help="The number of scoring jobs to run (which will run in parallel as well). For example, a limit of 5 would amount to only runn the first 5 jobs (rows) in --infile.")
 parser.add_argument('-p','--paired-end',action="store_true",help="Presence of this option indicates that reads are paired-end.")
 parser.add_argument('--rm-results-dirs',action="store_true",help="Presence of this option indicates that the results directory for the control and sample are to be removed. Useful for when doing a rerun.")
 parser.add_argument('--purge-inputs-dirs',action="store_true",help="Presence of this option indicates that all files are to be removed from the control and sample inputs directories, execpt for the control and sample conf fiels, respectively.")
@@ -88,11 +89,11 @@ for line in fh:
 		cmd += " --rescore-control={}".format(args.rescore_control)
 	print(cmd)
 	#let progam continue if runPeakseqWithoutSnapUpdates.py failes, since an email will already be sent in that case, to the 'sender' specified in conf.py.
-	try:
-		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
-		print(stdout,stderr)
-	except Exception as e:
-		raise
+	popen = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=False)
+	time.sleep(2) #check if command failed immediately for some reason
+	if popen.poll(): #if non-zero exit status
+		stdout,stderr = popen.communicate()
+		raise Exception("Command {cmd} failed with retcode {retcode}. Stdout is '{stdout}' and stderr is '{stderr}'.".format(cmd=cmd,retcode=popen.returncode,stdout=stdout,stderr=stderr))
 	if limit:
 		count += 1
 		if count >= limit:

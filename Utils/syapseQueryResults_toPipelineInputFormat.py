@@ -1,15 +1,9 @@
-import SyapseUtils
+
 import os
+
+import syapse_scgpm
 from gbsc_utils import gbsc_utils
 
-
-def getReadyToScoreFromSyapse(mode):
-	syapse = SyapseUtils.Utils(mode=mode)
-	conn = syapse.conn
-	rows = conn.kb.executeSyQLQuery(SyapseUtils.getReadyToScore()).rows
-	return rows
-		
-		
 
 def cleanLane(lane):
 	"""
@@ -21,19 +15,6 @@ def cleanLane(lane):
 	lane = lane.lstrip("L")
 	lane = lane.lstrip("0")
 	return lane
-
-def cleanSyapseBarcode(barcode):
-	"""
-	Function : Syapse barcodes are prefixed with a number and a colon, i.e. 2:ATCGGA. This function
-             strips off that number and colon prefix from the barcode.
-	Args     : barcode - str.
-	Returns  : str.
-	"""
-	barcode = barcode.split(":")
-	if len(barcode) == 2:
-		return barcode[1]
-	else:
-		return barcode[0]
 
 def createSampleReplicateName(runName,lane,barcode):
 	"""
@@ -62,8 +43,8 @@ def generateControlName(scoringNameUid,controlLibraryName):
 
 def convertAllQueryRows(rows):
 	"""
-	Function : Converts the records from the query issued in getReadyToScoreFromSyapse() to a dictionary structure that can be easily used to create a file formatted for scoring input to the scoring pipeline.
-	Args     : rows - a list of lists, where each sublist represents a row returned from the query executed in getReadyToScoreFromSyapse(). Basically, 'rows' is the output of a call to that function.
+	Function : Converts the records from the query issued in getScoringsReadyFromSyapse() to a dictionary structure that can be easily used to create a file formatted for scoring input to the scoring pipeline.
+	Args     : rows - a list of lists, where each sublist represents a row returned from the query executed in getScoringsReadyFromSyapse(). Basically, 'rows' is the output of a call to that function.
 	Returns  : scorings - dict. with keys being the scoring run name. The value of each key is another dict. with keys 'controlName' (the name of the control), 'expReplicates' (a list of experiment sample replicate names), and
 												'ctlReplicates' (a list of control sample replicate names). Note that the controlName is a generated name that convertQueryResultRecord() creates with a call to generateControlName(). Recall that each
 												 control replicate is typically a different replicate of the same control, and that in Sypase the library 'record name' for a given control is the control name with the suffix number appended.
@@ -83,8 +64,8 @@ def convertAllQueryRows(rows):
 
 def convertQueryResultRecord(record):
 	"""
-	Function : Converts an individual record (row) from the result of the query issued in getReadyToScoreFromSyapse() to a dictionary.
-	Args     : record - list representing one of the rows returned by getReadyToScoreFromSyapse().
+	Function : Converts an individual record (row) from the result of the query issued in getScoringsReadyFromSyapse() to a dictionary.
+	Args     : record - list representing one of the rows returned by getScoringsReadyFromSyapse().
 	Returns  : dict. with the structure defined below, where the key is given on the left side, and the data type and definition on the right.
 							"scoringRunName"   : str. The name of the scoring run
 							"expReplicateName" : str. The name of the experiment sample replicate
@@ -95,11 +76,11 @@ def convertQueryResultRecord(record):
 	#expLibraryUid = record[1] #not needed
 	expRunName = record[3]
 	expLane = record[4]
-	expBarcode = cleanSyapseBarcode(record[5])
+	expBarcode = syapse_scgpm.al.processSyapseBarcode(record[5])
 	#ctlLibraryUid = record[6] #not needed
 	ctlRunName = record[8]
 	ctlLane = record[9]
-	ctlBarcode = cleanSyapseBarcode(record[10])
+	ctlBarcode = syapse_scgpm.al.processSyapseBarcode(record[10])
 	ctlLibraryName = record[11]
 	
 	#constrution bam file name as used by seq_center pipeline
@@ -112,12 +93,14 @@ def convertQueryResultRecord(record):
 
 
 if __name__ == "__main__":
+	import logging
+	import sys
 	from argparse import ArgumentParser
-	description = "Either performs a query against Syapse to get all Scoring Requests that are with status 'Awaiting Scoring', or accepts an input file with all the scoring requests that need to be scored. When no input file is supplied, the former occurs, queyring Syapse with the function call SyapseUtils.getReadyToScore(). See the documentation of that function for details about the fields returned for each result. When infile is supplied, it must have tab delimited fields, where each line represents a row returned by the query in the function just mentioned. An output file is created with the query results transformed into the format that the scoring pipeline understands for batch input. Finally, the scoring pipeline can optionally be initiated when the --run-pipeline option is provided."
+	description = "Either performs a query against Syapse to get all Scoring Requests that are with status 'Awaiting Scoring', or accepts an input file with all the scoring requests that need to be scored. When no input file is supplied, the former occurs, queyring Syapse with the function call syapse_scgpm.syapseQueries.getScoringsReady(). See the documentation of that function for details about the fields returned for each result. When infile is supplied, it must have tab delimited fields, where each line represents a row returned by the query in the function just mentioned. An output file is created with the query results transformed into the format that the scoring pipeline understands for batch input. Finally, the scoring pipeline can optionally be initiated when the --run-pipeline option is provided."
 	parser = ArgumentParser(description=description)
-	parser.add_argument('-i','--infile',help="The tab-delimited file containing results from the Syapse query defined in the encode repository at encode/dcc_submit/SyapseUtils.getReadyToScore(). See documentation in that funciton for information on the format of the returned fields.")
-	parser.add_argument('-o','--outfile',required=True,help="The output file name that will be used as input into the batch scoring pipeline.")
-	parser.add_argument('-m','--mode',required=True,choices=list(SyapseUtils.Syapse.knownModes.keys()),help="Mode indicating which Syapse host account to use.")
+	parser.add_argument('-i','--infile',help="The tab-delimited file containing results from the Syapse query defined in syapse_scgpm.syapseQueries.getScoringsReady(). See documentation in that funciton for information on the format of the returned fields.")
+	parser.add_argument('-o','--outfile',required=True,help="The output file name that will be used as input into the batch scoring pipeline. If this file exists already, it will be overwritten.")
+	parser.add_argument('-m','--mode',required=True,choices=list(syapse_scgpm.syapse.Syapse.knownModes.keys()),help="Mode indicating which Syapse host account to use.")
 	parser.add_argument('-r','--run-pipeline',action="store_true",help="Presence of this option indicates to initiate the scoring pipeline after the query data has been formatted to that which the pipeine requires batch input.")
 	
 	args = parser.parse_args()
@@ -128,6 +111,16 @@ if __name__ == "__main__":
 	mode = args.mode
 	runPipeline = args.run_pipeline
 
+	logger = logging.getLogger(__name__)
+	logger.setLevel(logging.DEBUG)
+	ch= logging.StreamHandler(sys.stdout)
+	ch.setLevel(logging.DEBUG)
+	f_formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:   %(message)s')
+	ch.setFormatter(f_formatter)
+	logger.addHandler(ch)	
+
+	syapse = syapse_scgpm.al.Utils(mode=mode)
+
 	if infile:
 		fh = open(infile,'r')
 		allLines = fh.readlines() # list of strings.
@@ -137,10 +130,10 @@ if __name__ == "__main__":
 		fh.close()
 
 	else:
-		print("Querying Syapse for experiments ready to be scored.")
-		queryResultRows = getReadyToScoreFromSyapse(mode=mode)
-		print("Query Results:")
-		print(queryResultRows)
+		logger.info("Querying Syapse for experiments ready to be scored.")
+		queryResultRows = syapse.kb.executeSyQLQuery(syapse_scgpm.syapseQueries.getScoringsReady(mode=mode)).rows
+		logger.info("Query Results:")
+		logger.debug(queryResultRows)
 		conversion = convertAllQueryRows(queryResultRows)
 
 	fout = open(outfile,'w')
@@ -167,11 +160,11 @@ if __name__ == "__main__":
 		curTime = gbsc_utils.getCurTime() #year-month-day.hour.minute.second
 		needsBamsFileName = os.path.join(outfileDirectory,curTime + "_scoringsNeedingBams.txt")
 		readyToScoreFileName = os.path.join(outfileDirectory,curTime + "_readyToScore.txt")
-		print("Generating the conf files for the sample and control")
+		logger.info("Generating the conf files for the sample and control")
 		cmd = "python generateSampAndControlConfs.py	-i {outfile} -s {readyToScoreFileName} -b {needsBamsFileName} ".format(outfile=fout.name,readyToScoreFileName=readyToScoreFileName,needsBamsFileName=needsBamsFileName)
-		print(cmd)
+		logger.info(cmd)
 		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
-		print("Starting the batch scoring pipeline")
+		logger.info("Starting the batch scoring pipeline")
 		cmd = "batchScore.py -i {infile} -p --syapse-mode {mode}".format(infile=readyToScoreFileName,mode=mode)
-		print(cmd)
-		gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		logger.info(cmd)
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)

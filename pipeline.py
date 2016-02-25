@@ -11,7 +11,7 @@ import control_scoring
 import idr
 from conf import ConfigControl, ConfigSample
 import conf
-import SyapseUtils
+import syapse_scgpm
 
 BIN_DIR = conf.BIN_DIR
 ARCHIVE_DIR = conf.ARCHIVE_DIR
@@ -437,7 +437,7 @@ if __name__ == '__main__':
 	from optparse import OptionParser
 	description = "Runs PeakSeq scoring pipeline for ChipSeq data. There are two positional arguments: 1) (Mandatory) The path to the control conf file, and 2) (Optional, but mostly used) The path to the sample conf file."
 	parser = OptionParser(description=description)
-	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=SyapseUtils.Syapse.knownModes))
+	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()s))
 	parser.add_option("-f","--force",action="store_true",help="forces running of pipeline, even if results already exist")
 	parser.add_option("-d","--no_duplicates",action="store_true",help="runs cross correlation analysis assuming duplicated reads have already been filtered out of the mapped reads.  Uncommon, so defaults to false.")
 	parser.add_option("-a","--no_archive",action="store_false",dest="archive_results",help="do not archive the control and sample results.")
@@ -500,7 +500,7 @@ if __name__ == '__main__':
 
 	main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
 
-	syapse = SyapseUtils.Utils(mode="prod")
+	syapse = syapse_scgpm.al.Utils(mode="prod")
 	conn = syapse.conn
 	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
 	ai.scoringStatus.set("Scoring Completed")
