@@ -247,7 +247,7 @@ def cleanup(sample, control):
 	
 def idr_analysis(name, sample):
 	jobs = []
-	modules = ["r/3.2.2"]
+	modules = ["r/3.0.1"]
 	for i, rep_a in enumerate(sample.replicates):
 		for j in range(i+1, len(sample.replicates)):
 			rep_b = sample.replicates[j]
