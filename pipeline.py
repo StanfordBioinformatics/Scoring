@@ -437,7 +437,7 @@ if __name__ == '__main__':
 	from optparse import OptionParser
 	description = "Runs PeakSeq scoring pipeline for ChipSeq data. There are two positional arguments: 1) (Mandatory) The path to the control conf file, and 2) (Optional, but mostly used) The path to the sample conf file."
 	parser = OptionParser(description=description)
-	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()s))
+	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()))
 	parser.add_option("-f","--force",action="store_true",help="forces running of pipeline, even if results already exist")
 	parser.add_option("-d","--no_duplicates",action="store_true",help="runs cross correlation analysis assuming duplicated reads have already been filtered out of the mapped reads.  Uncommon, so defaults to false.")
 	parser.add_option("-a","--no_archive",action="store_false",dest="archive_results",help="do not archive the control and sample results.")
