@@ -361,22 +361,23 @@ def cleanup(sample, control):
 		
 def idr_analysis(name, sample):
 	jobs = []
+	modules = ["r/3.2.2"]
 	for i, rep_a in enumerate(sample.replicates):
 		for j in range(i+1, len(sample.replicates)):
 			rep_b = sample.replicates[j]
 			idr_name = '%s_VS_%s' % (rep_a.rep_name(sample), rep_b.rep_name(sample))
 			cmd = idr.idr_analysis_cmd(rep_a.narrowPeak, rep_b.narrowPeak, os.path.join(sample.idr_dir, idr_name), 'q.value', sample.genome)
-			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
+			jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE,modules=modules,project=PROJECT,sched_options="-m e"))
 			
 		# Pseudoreplicates
 		idr_name = '%s_PR1_VS_%s_PR2' % (rep_a.rep_name(sample), rep_a.rep_name(sample))
 		cmd = idr.idr_analysis_cmd(rep_a.narrowPeak_pr1, rep_a.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name+'_PR'), 'q.value', sample.genome)
-		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
+		jobs.append(sjm.Job('idr_analysis_' + idr_name, [cmd,], queue=QUEUE,modules=modules,project=PROJECT,sched_options="-m e"))
 		
 	# Pooled Pseudoreplicates
 	idr_name = '%s_PR1_VS_%s_PR2' % (sample.combined_replicate.rep_name(sample), sample.combined_replicate.rep_name(sample))
 	cmd = idr.idr_analysis_cmd(sample.combined_replicate.narrowPeak_pr1, sample.combined_replicate.narrowPeak_pr2, os.path.join(sample.idr_dir, idr_name), 'q.value', sample.genome)
-	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE, project=PROJECT,sched_options="-m e"))
+	jobs.append(sjm.Job('idr_analysis_'+ idr_name, [cmd,], queue=QUEUE,modules=modules,project=PROJECT,sched_options="-m e"))
 	
 	sample.add_jobs(name, jobs)
 	
