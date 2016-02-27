@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import sys
 import logging
 from argparse import ArgumentParser
 
@@ -35,3 +38,5 @@ if not mode == prodMode:
 	syapse = syapse_scgpm.al.Utils(mode=mode)
 
 syapse.setProperty(propertyName=scoringStatusPropertyName,value=status,unique_id=name)
+logger.info("Succeeded in setting the scoring status of '{name}' to '{status}'.".format(name=name,status=status))
+
