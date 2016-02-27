@@ -403,8 +403,18 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 
 	if emails:
 		print "emails" % emails
-		jobs.append(peakcaller.mail_results(sample, control, run_name, emails))
+		mail_job = peakcaller.mail_results(sample, control, run_name, emails))
+		mail_job_name = mail_job.name
+		jobs.append(mail_job)
 	#jobs.append(peakcaller.cleanup(sample, control))
+
+	#create job to set the "Scoring Status" attribute of the ChIP Seq Scoring object in Syapse to "Scoring Completed".
+	cmd = "setScoringStatusInSyapse.py --mode {syapseMode} --name {run_name} --status 'Scoring Completed'".format(syapseMode=syapseMode,run_name=run_name)
+	set_scoring_status_complete_job_name = "setScoringStatusCompleted"
+	job = sjm.Job(set_scoring_status_complete_job_name,cmd,modules = ["python/2.7.9","gbsc/syapse_scgpm/current"],queue=conf.QUEUE,host="localhost",dependencies=[mail_job_name],sched_options="-m e")
+	jobs.append(job)
+	
+	
 	
 	if SNAP_RUN and sample_conf:
 		scriptPath = os.path.join(scriptDir,"snap_support/production/current/peakseq_report_parser_wrapper.sh")
@@ -500,7 +510,7 @@ if __name__ == '__main__':
 
 	main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
 
-	syapse = syapse_scgpm.al.Utils(mode="prod")
+	syapse = syapse_scgpm.al.Utils(mode=syapseMode)
 	conn = syapse.conn
 	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
 	ai.scoringStatus.set("Scoring Completed")
