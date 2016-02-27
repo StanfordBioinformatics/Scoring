@@ -403,7 +403,7 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 
 	if emails:
 		print "emails" % emails
-		mail_job = peakcaller.mail_results(sample, control, run_name, emails))
+		mail_job = peakcaller.mail_results(sample, control, run_name, emails)
 		mail_job_name = mail_job.name
 		jobs.append(mail_job)
 	#jobs.append(peakcaller.cleanup(sample, control))
