@@ -13,7 +13,7 @@ SPP_BINARY = conf.SPP_BINARY
 SPP_BINARY_NO_DUPS = conf.SPP_BINARY_NO_DUPS
 	
 def idr_analysis_cmd(hit1, hit2, output, ranking_measure, genome):
-	cmd = "Rscript "
+	cmd = "/srv/gsfs0/software/R/R-2.15.1/bin/Rscript "
 	cmd += os.path.join(IDR_BIN_DIR[genome], 'batch-consistency-analysis.r')
 	cmd += ' %s' % hit1
 	cmd += ' %s' % hit2
