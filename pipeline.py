@@ -410,7 +410,7 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 	#create job to set the "Scoring Status" attribute of the ChIP Seq Scoring object in Syapse to "Scoring Completed".
 	cmd = "setScoringStatusInSyapse.py --mode {syapseMode} --name {run_name} --status 'Scoring Completed'".format(syapseMode=syapseMode,run_name=run_name)
 	set_scoring_status_complete_job_name = "setScoringStatusCompleted"
-	job = sjm.Job(set_scoring_status_complete_job_name,cmd,modules = ["python/2.7.9","gbsc/syapse_scgpm/current"],queue=conf.QUEUE,host="localhost",dependencies=[mail_job],sched_options="-m e")
+	job = sjm.Job(set_scoring_status_complete_job_name,cmd,modules = ["python/2.7.9","gbsc/encode-scoring/prod"],queue=conf.QUEUE,host="localhost",dependencies=[mail_job],sched_options="-m e")
 	jobs.append(job)
 	
 	
