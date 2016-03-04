@@ -272,7 +272,7 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 				print("Need to create a single-end reads only file from file {frf}.".format(frf=frf))
 				cmd = "samtools view -hbF 0x40 {peFile} > {seFile}".format(peFile=i,seFile=frf)
 				jobname = "toSingleEnd_{0}".format(os.path.basename(i))
-				job = sjm.Job(jobname,cmd,modules = ["samtools"],queue=conf.QUEUE,memory="5G",sched_options="-m e")
+				job = sjm.Job(jobname,cmd,modules = ["samtools/1.2"],queue=conf.QUEUE,memory="5G",sched_options="-m e")
 				jobs.append(job)
 		if jobs:
 			submission = sjm.Submission(jobs=jobs,log_directory=log_dir,notify=SJM_NOTIFY)		
