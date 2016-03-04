@@ -49,12 +49,17 @@ def logMissingBam(scoringName,runName,lane,bamfilename):
 
 def getBamFilePath(scoringName,rundir,bamfilename):
 	"""
-	Function : A wrapper for runPaths.getBamFile so that it logs any unfound BAM file.
+	Function : A wrapper for runPaths.getBamFile so that it logs any unfound BAM file. Runs gunzip if the BAM file has a .gz extension.
 	Args     : scoringName - the name of the scoring run
 						 rundir      - the run directory path to the published results.
 						 bamfilename - the name of the BAM file to find in the published results.
 	"""
 	path = runPaths.getBamFilePath(rundir=rundir,fileName=bamfilename)
+	if path.endswith(".gz"): #then gunzip it
+		cmd = "gunzip {path}".format(path=path)
+		print("Decompressing BAM file {path}".format(path=path))	
+		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
+		return path.rstrip(".gz")
 	if not path:
 		lane = runPaths.getLaneReg.search(bamfilename).groups()[0]
 		logMissingBam(scoringName=scoringName,runName=os.path.basename(rundir),lane=lane,bamfilename=bamfilename)
