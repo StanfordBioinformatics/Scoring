@@ -1,6 +1,7 @@
+import os
 import json
 
-conffh = open("conf.json",'r')
+conffh = open(os.path.join(os.path.dirname(__file__),"conf.json"),'r')
 conf = json.load(conffh)
 
 peakseq_binary = conf["peakseq_binary"]

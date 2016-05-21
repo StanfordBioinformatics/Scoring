@@ -11,7 +11,7 @@ import control_scoring
 import idr
 from conf import ConfigControl, ConfigSample
 import conf
-import syapse_scgpm
+#import syapse_scgpm
 
 BIN_DIR = conf.BIN_DIR
 ARCHIVE_DIR = conf.ARCHIVE_DIR
@@ -167,7 +167,8 @@ def getFileAgeMinutes(infile):
 	return minutes
 	
 	
-def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
+#def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
+def main(peakcaller, run_name, control_conf, sample_conf=None, print_cmds=False, log_dir=None, no_duplicates=False, archive_results=True, emails=None, peakcaller_options=None, xcorrelation_options=None, remove_duplicates=False, paired_end=False,force=False,rescore_control=0,genome=False,no_control_lock=False):
 	rescore_control = 24 * rescore_control #convert from days to hours
 
 	scriptDir = os.path.dirname(__file__)
@@ -408,9 +409,9 @@ def main(syapseMode,peakcaller, run_name, control_conf, sample_conf=None, print_
 	#jobs.append(peakcaller.cleanup(sample, control))
 
 	#create job to set the "Scoring Status" attribute of the ChIP Seq Scoring object in Syapse to "Scoring Completed".
-	cmd = "setScoringStatusInSyapse.py --mode {syapseMode} --name {run_name} --status 'Scoring Completed'".format(syapseMode=syapseMode,run_name=run_name)
-	set_scoring_status_complete_job_name = "setScoringStatusCompleted"
-	job = sjm.Job(set_scoring_status_complete_job_name,cmd,modules = ["python/2.7.9","gbsc/encode-scoring/prod"],queue=conf.QUEUE,host="localhost",dependencies=[mail_job],sched_options="-m e")
+#	cmd = "setScoringStatusInSyapse.py --mode {syapseMode} --name {run_name} --status 'Scoring Completed'".format(syapseMode=syapseMode,run_name=run_name)
+#	set_scoring_status_complete_job_name = "setScoringStatusCompleted"
+#	job = sjm.Job(set_scoring_status_complete_job_name,cmd,modules = ["python/2.7.9","gbsc/encode-scoring/prod"],queue=conf.QUEUE,host="localhost",dependencies=[mail_job],sched_options="-m e")
 	jobs.append(job)
 	
 	
@@ -446,7 +447,7 @@ if __name__ == '__main__':
 	from optparse import OptionParser
 	description = "Runs PeakSeq scoring pipeline for ChipSeq data. There are two positional arguments: 1) (Mandatory) The path to the control conf file, and 2) (Optional, but mostly used) The path to the sample conf file."
 	parser = OptionParser(description=description)
-	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()))
+#	parser.add_option('--syapse-mode',help="(Required) A string indicating which Syapse host to use. Must be one of elemensts given in {knownModes}.".format(knownModes=syapse_scgpm.syapse.Syapse.knownModes.keys()))
 	parser.add_option("-f","--force",action="store_true",help="forces running of pipeline, even if results already exist")
 	parser.add_option("-d","--no_duplicates",action="store_true",help="runs cross correlation analysis assuming duplicated reads have already been filtered out of the mapped reads.  Uncommon, so defaults to false.")
 	parser.add_option("-a","--no_archive",action="store_false",dest="archive_results",help="do not archive the control and sample results.")
@@ -464,9 +465,9 @@ if __name__ == '__main__':
 	parser.add_option("--filtchr",help="SPP option to ignore a chromosome during analysis.  Used to fix bug that chrs with low read counts causes SPP to fail")
 
 	options,arguments = parser.parse_args()
-	syapseMode = options.syapse_mode
-	if not syapseMode:
-		parser.error("You must supply the --mode argument!")	
+	#syapseMode = options.syapse_mode
+#	if not syapseMode:
+#		parser.error("You must supply the --mode argument!")	
 
 	peakcaller_options = {}
 	xcorrelation_options = {}
@@ -507,10 +508,11 @@ if __name__ == '__main__':
 	else:
 		parser.error("Invalid Peakcaller selected.  Options are 'peakseq', 'macs', 'macs2',  'spp' or 'spp_nodups'")
 
-	main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
+	#main(syapseMode,peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
+	main(peakcaller_module, options.run_name, control_conf, sample_conf, options.print_cmds, options.log_dir, options.no_duplicates, options.archive_results, options.emails, peakcaller_options, xcorrelation_options, options.remove_duplicates,options.paired_end,options.force,options.rescore_control,options.genome,options.no_control_lock)
 
-	syapse = syapse_scgpm.al.Utils(mode=syapseMode)
-	conn = syapse.conn
+	#syapse = syapse_scgpm.al.Utils(mode=syapseMode)
+#	conn = syapse.conn
 	ai = conn.kb.retrieveAppIndividualByUniqueId(options.run_name)
 	ai.scoringStatus.set("Scoring Completed")
 	conn.kb.saveAppIndividual(ai)

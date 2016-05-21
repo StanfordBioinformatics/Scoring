@@ -161,7 +161,7 @@ if __name__ == "__main__":
 		needsBamsFileName = os.path.join(outfileDirectory,curTime + "_scoringsNeedingBams.txt")
 		readyToScoreFileName = os.path.join(outfileDirectory,curTime + "_readyToScore.txt")
 		logger.info("Generating the conf files for the sample and control")
-		cmd = "python generateSampAndControlConfs.py	-i {outfile} -s {readyToScoreFileName} -b {needsBamsFileName} ".format(outfile=fout.name,readyToScoreFileName=readyToScoreFileName,needsBamsFileName=needsBamsFileName)
+		cmd = "generateSampAndControlConfs.py	-i {outfile} -s {readyToScoreFileName} -b {needsBamsFileName} ".format(outfile=fout.name,readyToScoreFileName=readyToScoreFileName,needsBamsFileName=needsBamsFileName)
 		logger.info(cmd)
 		stdout,stderr = gbsc_utils.createSubprocess(cmd=cmd,checkRetcode=True)
 		logger.info("Starting the batch scoring pipeline")
