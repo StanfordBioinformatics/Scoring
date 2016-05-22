@@ -71,6 +71,7 @@ def convert_elandsam(eland_output, sam_input, mismatches):
 		
 def convert_sam(eland_output, sam_input, mismatches):
 	'''Determines SAM format and converts to eland'''
+	print("Hi, sam input is: {sam_input}".format(sam_input=sam_input))
 	input = open(sam_input, 'r')
 	line = input.readline()
 	# Look for proper headers first

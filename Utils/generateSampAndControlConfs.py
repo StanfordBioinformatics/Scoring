@@ -56,6 +56,7 @@ def getBamFilePath(scoringName,rundir,bamfilename):
 						 rundir      - the run directory path to the published results.
 						 bamfilename - the name of the BAM file to find in the published results.
 	"""
+	print(rundir)
 	path = runPaths.getBamFilePath(rundir=rundir,fileName=bamfilename)
 	if path.endswith(".gz"): #then gunzip it
 		cmd = "gunzip {path}".format(path=path)

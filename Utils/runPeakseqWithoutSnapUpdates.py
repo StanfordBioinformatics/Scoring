@@ -58,7 +58,7 @@ if os.path.exists(snapLog):
 	os.remove(snapLog)
 logfh = open(snapLog,'w')
 
-pythonCmd = "{scoringPipelineScriptPath} --syapse-mode {syapseMode} -c macs -m tejaswini.mishra@stanford.edu -m trupti@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(syapseMode=args.syapse_mode,scoringPipelineScriptPath=conf.scoringPipelineScriptPath,runName=runName,sampInputsDir=sampInputsDir)
+pythonCmd = "{scoringPipelineScriptPath} --syapse-mode {syapseMode} -c macs  -m tejaswini.mishra@stanford.edu -m scg_scoring@lists.stanford.edu -n {runName} -l {sampInputsDir}".format(syapseMode=args.syapse_mode,scoringPipelineScriptPath=conf.scoringPipelineScriptPath,runName=runName,sampInputsDir=sampInputsDir)
 
 if rescoreControl > 0:
 	pythonCmd += " --rescore_control={rescore_control}".format(rescoreControl=rescoreControl)
@@ -74,8 +74,7 @@ if force:
 pythonCmd += " {controlConf} {sampConf}".format(controlConf=controlConf,sampConf=sampConf)
 pythonCmd += " 2> {stderr}".format(stderr=stderr)
 logfh.write(pythonCmd + "\n")
-
-qsubCmd = "qsub -V -R y -wd {sampDir} -m a -M {notifyEmail} {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
+qsubCmd = "qsub -V -R y -wd {sampDir} -m a -M {notifyEmail} -l h_rt=12:00:00 {pythonCmd}".format(sampDir=sampDir,notifyEmail=",".join(notifyEmail),pythonCmd=pythonCmd)
 #
 try:
 #	#set scoring status of ChIP Seq Scoring object in Syapse to "Running Analysis"
@@ -96,9 +95,9 @@ except Exception as e:
 
 
 #update Syapse's Chip Seq Scoring object's Scoring Status attribute to in progress:
-syapse = syapse_scgpm.al.Utils(mode="prod")
-conn = syapse.conn
-ai = conn.kb.retrieveAppIndividualByUniqueId(runName)
-ai.scoringStatus.set("Processing Scoring Results")
-ai = conn.kb.saveAppIndividual(ai)
+#syapse = syapse_scgpm.al.Utils(mode="prod")
+#conn = syapse.conn
+#ai = conn.kb.retrieveAppIndividualByUniqueId(runName)
+#ai.scoringStatus.set("Processing Scoring Results")
+#ai = conn.kb.saveAppIndividual(ai)
 logfh.close()
