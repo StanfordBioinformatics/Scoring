@@ -363,7 +363,7 @@ class BwaSamParser:
 		try:
 			num_best_hits=int(tags['X0'])
 		except KeyError: 
-			num_best_hits=0
+			num_best_hits=1 #bwa mem doens't ouput the X0 tag. Best to run those BAMs through MarkDuplicates first to remove dups.
 		
 		edit_distance=tags['NM']
 
