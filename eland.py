@@ -365,7 +365,7 @@ class BwaSamParser:
 		except KeyError: 
 			num_best_hits=1 #bwa mem doens't ouput the X0 tag. Best to run those BAMs through MarkDuplicates first to remove dups.
 		
-		edit_distance=tags['NM']
+		edit_distance = int(tags['NM'])
 
 		try:
 			num_mismatches=int(tags['XM'])
