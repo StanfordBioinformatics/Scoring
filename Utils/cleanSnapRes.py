@@ -11,6 +11,8 @@ import shutil
 import glob
 from argparse import ArgumentParser
 
+CONTROL_SCORINGS_PATH = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/controls/human"
+TREATMENT_SCORINGS_PATH = "/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human"
 description = ""
 
 parser = ArgumentParser(description=description)
@@ -19,7 +21,7 @@ parser.add_argument('-d',"--directory",required=True,help="Scoring run directory
 args = parser.parse_args()
 
 scoring_dir = args.directory
-if not scoring_dir.startswith("/srv/gsfs0/projects/gbsc/SNAP_Scoring/production/replicates/human"):
+if not (scoring_dir.startswith(CONTROL_SCORINGS_PATH) or scoring_dir.startswith(TREATMENT_SCORINGS_PATH)):
 	raise Exception("Disallowed path {}".format(scoring_dir))
 
 inputs_dir = os.path.join(scoring_dir,"inputs")
@@ -36,23 +38,23 @@ for i in glob.glob(os.path.join(inputs_dir,"*")):
 		continue
 	if os.path.isfile(i):
 		print("Removing file {}.".format(i))
-		#os.remove(i)
+		os.remove(i)
 	else:
 		print("Removing directory {}.".format(i))
-		#shutil.rmtree(i)
+		shutil.rmtree(i)
 		
 if os.path.exists(tmp_dir):
 	print("Removing directory {}.".format(tmp_dir))
-	#shutil.rmtree(tmp_dir)
+	shutil.rmtree(tmp_dir)
 
 if os.path.exists(idr_dir):
 	print("Removing directory {}.".format(idr_dir))
-	#shutil.rmtree(idr_dir)
+	shutil.rmtree(idr_dir)
 
 for i in glob.glob(os.path.join(results_dir,"*")):
 	if os.path.isdir(i):
 		print("Removing {}".format(i))
-		#shutil.rmtree(i)
+		shutil.rmtree(i)
 
 
 
